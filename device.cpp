@@ -11,8 +11,8 @@ Madgwick MadgwickFilter;
 #include <SparkFunLSM9DS1.h>
 
 LSM9DS1 imu;
-#define LSM9DS1_M 0x1C   // コンパスのI2C初期アドレス
-#define LSM9DS1_AG 0x6A  // 加速度とジャイロのI2C初期アドレス
+#define LSM9DS1_M 0x1E   // コンパスのI2C初期アドレス
+#define LSM9DS1_AG 0x6B  // 加速度とジャイロのI2C初期アドレス
 
 #define PS4_MAC "08:B6:1F:3B:81:AE"  //PS4コントローラのMACアドレス
 
@@ -72,6 +72,19 @@ void setupDevice() {
   Serial.begin(115200);
   Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
   Wire.begin();
+  //IMU用ここから
+  if (imu.begin(LSM9DS1_AG, LSM9DS1_M, Wire) == false)  //IMUの起動を判定
+  {
+    Serial.println("Failed to communicate with LSM9DS1.");//接続できてなかったら進まない
+    while (1) {};
+  }
+
+  MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
+  getIMU();//IMUからデータ取得
+  MadgwickFilter.updateIMU(imu_9dof[3] / 2.048, imu_9dof[4] / 2.048, imu_9dof[5] / 2.048, imu_9dof[0] / 16384.0, imu_9dof[1] / 16384.0, imu_9dof[2] / 16384.0);
+  imu_yaw_offset = (MadgwickFilter.getYaw() - 180);  //このときのyaw角を0にする
+  stime_offset = millis();//IMUのドリフト補正用に時間を図ってる
+  //IMU用ここまで
 }
 
 void InputVelocity() {
@@ -182,7 +195,12 @@ void getIMU() {  //IMUの値を取得する関数
 
 void readDevice() {
   getIMU();
-  updateOpticalFlowVelocity();
-
+  //IMUのデータを処理してるとこ
+  stime = millis() - stime_offset;
+  MadgwickFilter.updateIMU(imu_9dof[3] / 2.048, imu_9dof[4] / 2.048, imu_9dof[5] / 2.048, imu_9dof[0] / 16384.0, imu_9dof[1] / 16384.0, imu_9dof[2] / 16384.0);
+  imu_yaw = ((MadgwickFilter.getYaw() - 180) - stime / 100000 * 26.4) / 180 * PI;  //IMUのデータをフィルターに入れてる、ドリフトの補正も入っている
+  //IMUのデータ処理ここまで
   SensorValue::imu_yaw = imu_9dof[12];
+  
+  updateOpticalFlowVelocity();
 }
