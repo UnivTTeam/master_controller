@@ -3,7 +3,7 @@
 #include "params.h"
 #include "device.h"
 #include "map.h"
-#include "operate.h"
+#include "task.h"
 
 float last_control_time = 0;
 
@@ -28,11 +28,8 @@ void loop() {
     // 自己位置情報を更新
     updateMap();
     
-    // 指令値を更新 (引数いい感じにしてください)
-    float vx = 0.0f;
-    float vy = 0.0f;
-    float theta = 0.0f;
-    setVelocityFromField(vx, vy, theta);
+    // コントローラーに基づいて指令値を設定する
+    Task::taskCallback();
 
     // 指令値を送信
     sendDataToChild();

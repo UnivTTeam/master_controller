@@ -16,6 +16,8 @@ inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, M_PI / 2);
 inline const Transform::StaticTransform<float> optical_flow_pos(0.0f, 0.0f, M_PI / 2);
 
 // 制御パラメタ
-inline const float rotKp = 4.0;
+inline const float rotKp = 4.0f;
+inline const float MAX_PARA_VEL = 5.0f;
+inline const float MAX_ROT_VEL = 5.0f;
 }
 

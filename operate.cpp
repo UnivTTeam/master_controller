@@ -2,6 +2,16 @@
 #include "device.h"
 #include "params.h"
 
+float scaling(float value, float max_value)
+{
+    if(value > max_value){
+      value = max_value;
+    }else if (value < -max_value){
+      value = -max_value;
+    }
+    return value / max_value;
+}
+
 void setVelocityFromField(float vx0, float vy0, float theta0)
 {
   // thetaのP制御
@@ -16,7 +26,7 @@ void setVelocityFromField(float vx0, float vy0, float theta0)
   Transform::MultidiffTransform<float, 1> operate_dest = (-robot_pos.staticTransform()) + robot_dest;
 
   // 指令値を書き込み
-  CommandValue::wheel_vx = operate_dest.dynamic_frame[0].pos.x;
-  CommandValue::wheel_vy = operate_dest.dynamic_frame[0].pos.y;
-  CommandValue::wheel_vw = operate_dest.dynamic_frame[0].rot;
+  CommandValue::wheel_vx = scaling(operate_dest.dynamic_frame[0].pos.x, Params::MAX_PARA_VEL);
+  CommandValue::wheel_vy = scaling(operate_dest.dynamic_frame[0].pos.y, Params::MAX_PARA_VEL);
+  CommandValue::wheel_vw = scaling(operate_dest.dynamic_frame[0].rot, Params::MAX_ROT_VEL);
 }
