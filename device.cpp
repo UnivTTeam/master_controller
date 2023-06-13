@@ -1,4 +1,5 @@
 #include "device.h"
+#include "flow.h"
 
 #include <MadgwickAHRS.h>
 Madgwick MadgwickFilter;
@@ -69,6 +70,7 @@ float stime_offset = 0;
 
 void setupDevice() {
   Serial.begin(115200);
+  Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
   Wire.begin();
 }
 
@@ -180,6 +182,7 @@ void getIMU() {  //IMUの値を取得する関数
 
 void readDevice() {
   getIMU();
+  updateOpticalFlowVelocity();
 
   SensorValue::imu_yaw = imu_9dof[12];
 }

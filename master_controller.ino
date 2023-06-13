@@ -5,15 +5,17 @@
 #include "map.h"
 #include "operate.h"
 
+float last_control_time = 0;
+
 void setup() {
   setupDevice();
   initMap();
+  last_control_time = micros() - Params::control_interval_us;
 }
 
-float last_control_time = 0;
 void loop() {
   // メインループ
-  last_control_time = micros() - Params::control_interval_us;
+  get_flow();
 
   // 一定周期ごとに制御を行う
   if (micros() - last_control_time >= Params::control_interval_us) {
