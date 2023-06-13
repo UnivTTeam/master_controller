@@ -1,0 +1,3 @@
+[submodule "libwheels"]
+	path = libwheels
+	url = git@github.com:UnivTTeam/libwheels.git
