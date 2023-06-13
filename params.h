@@ -17,6 +17,8 @@ inline const Transform::StaticTransform<float> optical_flow_pos(0.0f, 0.0f, M_PI
 
 // 制御パラメタ
 inline const float rotKp = 4.0f;
+
+// 通信パラメタ：親機と子機で同期する
 inline const float MAX_PARA_VEL = 5.0f;
 inline const float MAX_ROT_VEL = 5.0f;
 }

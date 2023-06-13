@@ -10,6 +10,11 @@ void initMap()
 }
 
 void updateMap(){
+  // 角速度を求める
+  static float last_imu_yaw = SensorValue::imu_yaw;
+  float omega = (SensorValue::imu_yaw - last_imu_yaw) / Params::control_interval_sec;
+  last_imu_yaw = SensorValue::imu_yaw;
+
   // フィールド座標系からオプティカルフロー座標系への変換を求める
   Transform::StaticTransform<float> optical_flow_pos = 
       robot_pos.staticTransform() + Params::optical_flow_pos;
@@ -18,8 +23,8 @@ void updateMap(){
         linear::Vec2<float>(
           SensorValue::optical_flow_vx, 
           SensorValue::optical_flow_vy),
-      SensorValue::imu_yaw);
-  
+      omega);
+      
   Transform::MultidiffTransform<float, 1> optical_flow_frame(optical_flow_pos, optical_flow_vel);
   
   // フィールド座標系からマシン座標系への変換を求める
