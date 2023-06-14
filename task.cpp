@@ -146,10 +146,10 @@ void taskCallback() {
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   }
 
-  // Serial.printf("%f %f %f %f %f %f %f\n", 
-  //   current_time,
-  //   robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-  //   robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-  // );
+  Serial.printf("%f %f %f %f %f %f %f\n", 
+    current_time,
+    robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+    robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+  );
 }
 }

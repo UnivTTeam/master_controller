@@ -140,7 +140,6 @@ void sendDataToChild() {
   // Serial.printf("%d %d %d\n", vx, vy, vw);
 
   Wire.beginTransmission(I2C_DEV_ADDR);
-  Wire.write('U');
   Wire.write(vx);
   Wire.write(vy);
   Wire.write(vw);
