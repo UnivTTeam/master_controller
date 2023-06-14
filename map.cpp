@@ -12,7 +12,8 @@ void initMap()
 void updateMap(){
   // 角速度を求める
   static float last_imu_yaw = SensorValue::imu_yaw;
-  float omega = Params::gyro_scale * (SensorValue::imu_yaw - last_imu_yaw) / Params::control_interval_sec;
+  float dTheta = std::remainder(SensorValue::imu_yaw - last_imu_yaw, 2 * M_PI);
+  float omega = dTheta / Params::control_interval_sec;
   last_imu_yaw = SensorValue::imu_yaw;
 
   // フィールド座標系からオプティカルフロー座標系への変換を求める

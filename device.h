@@ -17,6 +17,9 @@ extern volatile float wheel_vw;
 // デバイスの初期化
 void setupDevice();
 
+// IMUの読み込み
+void getIMU();
+
 // デバイス読み込み
 void readDevice();
 

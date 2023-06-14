@@ -1,6 +1,7 @@
 #include "device.h"
 #include "flow.h"
 #include "params.h"
+#include "common.h"
 
 #include <MadgwickAHRS.h>
 Madgwick MadgwickFilter;
@@ -27,13 +28,6 @@ float imu_9dof[13];   //ax,ay,az,gx,gy,gz,mx,my,mz,temperature,roll,pitch,yaw
 
 float imu_yaw = 0;
 
-void getIMU();
-
-hw_timer_t * timer = NULL;
-void IRAM_ATTR onTimerDeviceRead() {
-  getIMU();
-}
-
 void setupIMU() {
   MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
   //IMU用ここから
@@ -42,12 +36,6 @@ void setupIMU() {
     Serial.println("Failed to communicate with LSM9DS1.");//接続できてなかったら進まない
     while (1) {};
   }
-
-  // タイマーの設定
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTimerDeviceRead, true);
-  timerAlarmWrite(timer, 1000, true);
-  timerAlarmEnable(timer);
 }
 
 void setupDevice() {
@@ -112,6 +100,7 @@ void getIMU() {  //IMUの値を取得する関数
   if(imu_calibration_now && stime > imu_calibration_time_us){
     float yaw = MadgwickFilter.getYaw() - 180.0f;
     imu_drift = (yaw - yaw0) / (stime - stime0);
+    imu_drift += 0.0000000003f;
     imu_calibration_now = false;
   }
 
@@ -123,11 +112,12 @@ void getIMU() {  //IMUの値を取得する関数
     static float imu_yaw_offset = imu_yaw;
     imu_yaw -= imu_yaw_offset;
   }
+  // Serial.printf("%f %f\n", micros()/1000000.f, imu_yaw);
 }
 
 void readDevice() {
-  // デバイス情報をfetch
-  SensorValue::imu_yaw = imu_yaw;
+  // デバイス情報を読み込み
+  SensorValue::imu_yaw = Params::gyro_scale * imu_yaw;
   updateOpticalFlowVelocity();
 }
 
@@ -141,13 +131,13 @@ volatile float wheel_vw = 0.0f;
 
 void sendDataToChild() {
   //グローバル変数wheel_vx,wheel_vy,wheel_vwを読み込み
-  uint8_t vx = (uint8_t)(CommandValue::wheel_vx * 127 + 128);
-  uint8_t vy = (uint8_t)(CommandValue::wheel_vy * 127 + 128);
-  uint8_t vw = (uint8_t)(CommandValue::wheel_vw * 127 + 128);
+  uint8_t vx = encode_float(CommandValue::wheel_vx, Params::MAX_PARA_VEL);
+  uint8_t vy = encode_float(CommandValue::wheel_vy, Params::MAX_PARA_VEL);
+  uint8_t vw = encode_float(CommandValue::wheel_vw, Params::MAX_ROT_VEL);
 
   uint8_t modeid = 0;
 
-  //Serial.printf("%d,%d,%d\n", vx, vy, vw);
+  // Serial.printf("%d %d %d\n", vx, vy, vw);
 
   Wire.beginTransmission(I2C_DEV_ADDR);
   Wire.write('U');

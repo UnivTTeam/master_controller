@@ -17,19 +17,30 @@ enum class Mode : int {
   Auto = 1,
 };
 
+const int switch_minimum_interval = 1000;
 struct SwitchUpperTrigger {
-  SwitchUpperTrigger() : last_state(false)
+  SwitchUpperTrigger() : last_state(false), last_time(millis())
   {
   }
 
   bool operator()(bool state){
     bool trigger = state ^ last_state;
     last_state = state;
-    return (trigger & state);
+
+    bool ret = (trigger & state);
+    if(ret){
+      int t = millis();
+      if(t - last_time > switch_minimum_interval){
+        last_time = t;
+        return true;
+      }
+    }
+    return false;
   }
 
 private:
   bool last_state;
+  int last_time;
 };
 
 linear::Vec2<float> v_dest(0.0f, 0.0f);
@@ -41,6 +52,7 @@ float current_time = 0.0f;
 
 std::function<bool()> auto_mode_callback = []() { return true; };
 
+SwitchUpperTrigger kumade_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger l1_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger r1_wrapper = SwitchUpperTrigger();
 
@@ -48,12 +60,12 @@ void setupTask() {
   PS4.begin(PS4_MAC);
 }
 
-float stickToVelocity(float stick_input){
-  float v = stick_input / 128.0f;
-  if(abs(v) < 0.15f){
-    v = 0.0f;
+float stickToVelocity(int8_t stick_input){
+  float ratio = static_cast<float>(stick_input) / 128.0f;
+  if(abs(ratio) < 0.1f){
+    ratio = 0.0f;
   }
-  return v;
+  return 500.0f * ratio;
 }
 
 void taskCallback() {
@@ -70,17 +82,15 @@ void taskCallback() {
   
   if(mode != Mode::Emergency){
     // 熊手処理
-    if(elevator_state == 0 && PS4.Left()){
-      Serial.printf("熊手を上げる処理1\n");
-      elevator_state = 1;
-    }
-    if(elevator_state == 1 && PS4.Down()){
-      Serial.printf("熊手を上げる処理2\n");
-      elevator_state = 2;
-    }
-    if(elevator_state == 2 && PS4.Right()){
-      Serial.printf("熊手を上げる処理3\n");
-      elevator_state = 3;
+    if(kumade_wrapper(PS4.Circle())){
+      if(elevator_state == 0){
+        Serial.printf("熊手を上げる処理1\n");
+      }else if(elevator_state == 1){
+        Serial.printf("熊手を上げる処理2\n");
+      }else if(elevator_state == 2){
+        Serial.printf("熊手を上げる処理3\n");
+      }
+      elevator_state++;      
     }
 
     // 足回り処理
@@ -136,10 +146,10 @@ void taskCallback() {
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   }
 
-  Serial.printf("%f %f %f %f %f %f %f\n", 
-    current_time,
-    robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-    robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-  );
+  // Serial.printf("%f %f %f %f %f %f %f\n", 
+  //   current_time,
+  //   robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+  //   robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+  // );
 }
 }
