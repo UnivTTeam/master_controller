@@ -30,6 +30,6 @@ inline const float imu_calibration_time_sec = 5.0f;
 inline const float imu_calibration_start_time_sec = 2.0f;
 
 // ジャイロの生の値を角度に変更する定数 [rad / rawZ]
-inline const float gyro_scale = 4.062495349365322f;
+inline const float gyro_scale = 1.0f; // 4.062495349365322f;
 }
 

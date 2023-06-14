@@ -26,19 +26,16 @@ volatile float optical_flow_vy = 0.0f;
 float imu_9dof[13];   //ax,ay,az,gx,gy,gz,mx,my,mz,temperature,roll,pitch,yaw
 
 float imu_yaw = 0;
-float imu_yaw_offset = 0;
-
-float yaw = 0;
-
-bool imu_calibration_now = true;
-float stime = 0.0f;
-const float imu_calibration_time_ms = Params::imu_calibration_time_sec * 1000.0f;
-const float imu_calibration_start_time_ms = Params::imu_calibration_start_time_sec * 1000.0f;
-float imu_drift = 0.0f;
 
 void getIMU();
 
+hw_timer_t * timer = NULL;
+void IRAM_ATTR onTimerDeviceRead() {
+  getIMU();
+}
+
 void setupIMU() {
+  MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
   //IMU用ここから
   if (imu.begin(LSM9DS1_AG, LSM9DS1_M, Wire) == false)  //IMUの起動を判定
   {
@@ -46,16 +43,25 @@ void setupIMU() {
     while (1) {};
   }
 
-  getIMU();//IMUからデータ取得
+  // タイマーの設定
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &onTimerDeviceRead, true);
+  timerAlarmWrite(timer, 1000, true);
+  timerAlarmEnable(timer);
 }
 
 void setupDevice() {
   Serial.begin(115200);
   Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
   Wire.begin();
-  MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
   setupIMU();
 }
+
+bool imu_calibration_now = true;
+float stime = 0.0f;
+const float imu_calibration_time_us = Params::imu_calibration_time_sec * 1000.0f * 1000.0f;
+const float imu_calibration_start_time_us = Params::imu_calibration_start_time_sec * 1000.0f * 1000.0f;
+float imu_drift = 0.0f;
 
 void getIMU() {  //IMUの値を取得する関数
   if (imu.gyroAvailable()) {
@@ -82,8 +88,8 @@ void getIMU() {  //IMUの値を取得する関数
   imu_9dof[9] = imu.temperature;
 
   // MadgwickFilterの更新
-  static float stime_offset = millis() + imu_calibration_start_time_ms;//IMUのドリフト補正用に時間を図ってる
-  float stime = millis() - stime_offset;
+  static float stime_offset = micros() + imu_calibration_start_time_us;//IMUのドリフト補正用に時間を図ってる
+  float stime = micros() - stime_offset;
   MadgwickFilter.updateIMU(
       imu_9dof[3] / 2.048f, 
       imu_9dof[4] / 2.048f, 
@@ -103,7 +109,7 @@ void getIMU() {  //IMUの値を取得する関数
   }
 
   // キャリブ終了したら反映
-  if(imu_calibration_now && stime > imu_calibration_time_ms){
+  if(imu_calibration_now && stime > imu_calibration_time_us){
     float yaw = MadgwickFilter.getYaw() - 180.0f;
     imu_drift = (yaw - yaw0) / (stime - stime0);
     imu_calibration_now = false;
@@ -120,9 +126,8 @@ void getIMU() {  //IMUの値を取得する関数
 }
 
 void readDevice() {
-  getIMU();
+  // デバイス情報をfetch
   SensorValue::imu_yaw = imu_yaw;
-  
   updateOpticalFlowVelocity();
 }
 
