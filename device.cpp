@@ -1,11 +1,11 @@
 #include "device.h"
 #include "flow.h"
+#include "params.h"
 
 #include <MadgwickAHRS.h>
 Madgwick MadgwickFilter;
 
 #include <Arduino.h>
-//#include <PS4Controller.h>
 
 #include <Wire.h>
 #include <SparkFunLSM9DS1.h>
@@ -14,18 +14,7 @@ LSM9DS1 imu;
 #define LSM9DS1_M 0x1E   // コンパスのI2C初期アドレス
 #define LSM9DS1_AG 0x6B  // 加速度とジャイロのI2C初期アドレス
 
-#define PS4_MAC "08:B6:1F:3B:81:AE"  //PS4コントローラのMACアドレス
-
-#define PI 3.141592653589793
-
 #define I2C_DEV_ADDR 0x34
-
-float imu_9dof[13];   //ax,ay,az,gx,gy,gz,mx,my,mz,temperature,roll,pitch,yaw
-
-float imu_yaw = 0;
-float imu_yaw_offset = 0;
-
-float yaw = 0;
 
 // センサ値
 namespace SensorValue {
@@ -34,44 +23,22 @@ volatile float optical_flow_vx = 0.0f;
 volatile float optical_flow_vy = 0.0f;
 }
 
-// 指令値
-namespace CommandValue {
-volatile float wheel_vx = 0.0f;
-volatile float wheel_vy = 0.0f;
-volatile float wheel_vw = 0.0f;
-}
+float imu_9dof[13];   //ax,ay,az,gx,gy,gz,mx,my,mz,temperature,roll,pitch,yaw
 
+float imu_yaw = 0;
+float imu_yaw_offset = 0;
 
-float delta_vw_little = 0.2;
-float delta_vw_big = 0.8;
+float yaw = 0;
 
-float input_vx = 0;
-float input_vy = 0;
-float input_vw = 0;
+bool imu_calibration_now = true;
+float stime = 0.0f;
+const float imu_calibration_time_ms = Params::imu_calibration_time_sec * 1000.0f;
+const float imu_calibration_start_time_ms = Params::imu_calibration_start_time_sec * 1000.0f;
+float imu_drift = 0.0f;
 
-bool input_vibe = false;
-bool input_stop = false;
+void getIMU();
 
-bool input_elevator_0 = false;
-bool input_elevator_1 = false;
-bool input_elevator_2 = false;
-bool input_elevator_3 = false;
-
-bool elevator_open_0 = false;
-bool elevator_open_1 = false;
-bool elevator_open_2 = false;
-bool elevator_open_3 = false;
-
-//制御間隔(micro sec)
-float dt = 20000;  //20ms
-unsigned long tmp_time = 0;
-float stime = 0;
-float stime_offset = 0;
-
-void setupDevice() {
-  Serial.begin(115200);
-  Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
-  Wire.begin();
+void setupIMU() {
   //IMU用ここから
   if (imu.begin(LSM9DS1_AG, LSM9DS1_M, Wire) == false)  //IMUの起動を判定
   {
@@ -79,93 +46,15 @@ void setupDevice() {
     while (1) {};
   }
 
-  MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
   getIMU();//IMUからデータ取得
-  MadgwickFilter.updateIMU(imu_9dof[3] / 2.048, imu_9dof[4] / 2.048, imu_9dof[5] / 2.048, imu_9dof[0] / 16384.0, imu_9dof[1] / 16384.0, imu_9dof[2] / 16384.0);
-  imu_yaw_offset = (MadgwickFilter.getYaw() - 180);  //このときのyaw角を0にする
-  stime_offset = millis();//IMUのドリフト補正用に時間を図ってる
-  //IMU用ここまで
 }
 
-void InputVelocity() {
-  input_vx = 10.0;
-  input_vy = 20.0;
-  
-  input_vw = 0;
-  bool l1 = true;
-  bool r1 = true;
-  bool l2 = true;
-  bool r2 = true;
-  if (l1) {
-    input_vw = input_vw + delta_vw_little;
-  }
-  if (r1) {
-    input_vw = input_vw - delta_vw_little;
-  }
-  if (l2) {
-    input_vw = input_vw + delta_vw_big;
-  }
-  if (r2) {
-    input_vw = input_vw - delta_vw_big;
-  }
-
-  input_vibe = 0;
-  input_stop = 0;
-  
-  input_elevator_3 = elevator_open_2;
-  input_elevator_2 = elevator_open_1;
-  input_elevator_1 = elevator_open_0;
-  input_elevator_0 = true;
-
-  float drift_th = 0.15;
-  float slow_th = 0.6;
-  // ドリフト対策
-  if (abs(input_vy) < drift_th) {
-    input_vy = 0;
-  }
-
-  if (abs(input_vx) < drift_th) {
-    input_vx = 0;
-  }
-}
-
-void sendDataToChild() {
-  //グローバル変数wheel_vx,wheel_vy,wheel_vwを読み込み
-  uint8_t vx = (uint8_t)(CommandValue::wheel_vx * 127 + 128);
-  uint8_t vy = (uint8_t)(CommandValue::wheel_vy * 127 + 128);
-  uint8_t vw = (uint8_t)(CommandValue::wheel_vw * 127 + 128);
-
-  uint8_t modeid = 0;
-
-  Serial.printf("%d,%d,%d\n", vx, vy, vw);
-
-  Wire.beginTransmission(I2C_DEV_ADDR);
-  Wire.write('U');
-  Wire.write(vx);
-  Wire.write(vy);
-  Wire.write(vw);
-  Wire.write(modeid);
-  uint8_t error = Wire.endTransmission(true);
-
-  if(input_vibe){
-    //TODO: do_vibe
-  }
-  if(input_stop){
-    //TODO: do_stop
-  }
-  if(input_elevator_3){
-    //not yet
-  }
-  if(input_elevator_2){
-    //not_yet
-  }
-  if(input_elevator_1){
-    //not_yet
-  }
-  if(input_elevator_0){
-    //not_yet
-  }
-  
+void setupDevice() {
+  Serial.begin(115200);
+  Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
+  Wire.begin();
+  MadgwickFilter.begin(100);  //100Hz、yaw角を求めるフィルターの起動
+  setupIMU();
 }
 
 void getIMU() {  //IMUの値を取得する関数
@@ -191,16 +80,75 @@ void getIMU() {  //IMUの値を取得する関数
   imu_9dof[7] = imu.calcMag(imu.my);
   imu_9dof[8] = imu.calcMag(imu.mz);
   imu_9dof[9] = imu.temperature;
+
+  // MadgwickFilterの更新
+  static float stime_offset = millis() + imu_calibration_start_time_ms;//IMUのドリフト補正用に時間を図ってる
+  float stime = millis() - stime_offset;
+  MadgwickFilter.updateIMU(
+      imu_9dof[3] / 2.048f, 
+      imu_9dof[4] / 2.048f, 
+      imu_9dof[5] / 2.048f, 
+      imu_9dof[0] / 16384.0f,
+      imu_9dof[1] / 16384.0f, 
+      imu_9dof[2] / 16384.0f);
+
+  // キャリブレーション開始時の処理
+  static bool imu_calibration_need_start = true;
+  static float stime0 = 0.0f;
+  static float yaw0 = 0.0f;
+  if(imu_calibration_need_start && stime > 0.0f){
+    stime0 = stime;
+    yaw0 = MadgwickFilter.getYaw() - 180.0f;
+    imu_calibration_need_start = false;
+  }
+
+  // キャリブ終了したら反映
+  if(imu_calibration_now && stime > imu_calibration_time_ms){
+    float yaw = MadgwickFilter.getYaw() - 180.0f;
+    imu_drift = (yaw - yaw0) / (stime - stime0);
+    imu_calibration_now = false;
+  }
+
+  if(imu_calibration_now){
+    imu_yaw = 0.0f;
+  } else {
+    //IMUのデータをフィルターに入れてる、ドリフトの補正も入っている
+    imu_yaw = ((MadgwickFilter.getYaw() - 180.0f) - imu_drift * stime) / 180.0f * M_PI;
+    static float imu_yaw_offset = imu_yaw;
+    imu_yaw -= imu_yaw_offset;
+  }
 }
 
 void readDevice() {
   getIMU();
-  //IMUのデータを処理してるとこ
-  stime = millis() - stime_offset;
-  MadgwickFilter.updateIMU(imu_9dof[3] / 2.048, imu_9dof[4] / 2.048, imu_9dof[5] / 2.048, imu_9dof[0] / 16384.0, imu_9dof[1] / 16384.0, imu_9dof[2] / 16384.0);
-  imu_yaw = ((MadgwickFilter.getYaw() - 180) - stime / 100000 * 26.4) / 180 * PI;  //IMUのデータをフィルターに入れてる、ドリフトの補正も入っている
-  //IMUのデータ処理ここまで
-  SensorValue::imu_yaw = imu_9dof[12];
+  SensorValue::imu_yaw = imu_yaw;
   
   updateOpticalFlowVelocity();
+}
+
+
+// 指令値
+namespace CommandValue {
+volatile float wheel_vx = 0.0f;
+volatile float wheel_vy = 0.0f;
+volatile float wheel_vw = 0.0f;
+}
+
+void sendDataToChild() {
+  //グローバル変数wheel_vx,wheel_vy,wheel_vwを読み込み
+  uint8_t vx = (uint8_t)(CommandValue::wheel_vx * 127 + 128);
+  uint8_t vy = (uint8_t)(CommandValue::wheel_vy * 127 + 128);
+  uint8_t vw = (uint8_t)(CommandValue::wheel_vw * 127 + 128);
+
+  uint8_t modeid = 0;
+
+  //Serial.printf("%d,%d,%d\n", vx, vy, vw);
+
+  Wire.beginTransmission(I2C_DEV_ADDR);
+  Wire.write('U');
+  Wire.write(vx);
+  Wire.write(vy);
+  Wire.write(vw);
+  Wire.write(modeid);
+  uint8_t error = Wire.endTransmission(true);
 }

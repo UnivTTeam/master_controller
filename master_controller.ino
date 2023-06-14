@@ -1,4 +1,4 @@
-ko#include <Arduino.h>
+#include <Arduino.h>
 
 #include "params.h"
 #include "device.h"
@@ -10,6 +10,7 @@ float last_control_time = 0;
 void setup() {
   setupDevice();
   initMap();
+  Task::setupTask();
   last_control_time = micros() - Params::control_interval_us;
 }
 
