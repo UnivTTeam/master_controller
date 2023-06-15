@@ -17,7 +17,7 @@ enum class Mode : int {
   Auto = 1,
 };
 
-const int switch_minimum_interval = 1000;
+const int switch_minimum_interval = 100;
 struct SwitchUpperTrigger {
   SwitchUpperTrigger() : last_state(false), last_time(millis())
   {
@@ -107,10 +107,12 @@ void taskCallback() {
 
       // L1 R1による角度微調整
       if (l1_wrapper(PS4.L1())) {
-        theta_dest += Params::l1r1_rot_angle;
+        float dtheta = Params::l1r1_rot_angle;
+        robot_pos.static_frame.rot = linear::Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
       }
       if (r1_wrapper(PS4.R1())) {
-        theta_dest -= Params::l1r1_rot_angle;
+        float dtheta = -Params::l1r1_rot_angle;
+        robot_pos.static_frame.rot = linear::Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
       }
 
       // モード受付
