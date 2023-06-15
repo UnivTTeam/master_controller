@@ -66,7 +66,7 @@ float stickToVelocity(int8_t stick_input){
   if(abs(ratio) < 0.1f){
     ratio = 0.0f;
   }
-  return 500.0f * ratio;
+  return Params::MAX_PARA_VEL * ratio;
 }
 
 void taskCallback() {
@@ -144,21 +144,51 @@ void taskCallback() {
           v_dest.x = 0.2 * std::sin(10.0f * t);
           return (t >= 1.0f);
         };
+      } else if (PS4.Triangle()) {
+        mode = Mode::Auto;
+        float start_time = current_time;
+        float duration_time = 4.0f;
+        linear::Vec2<float> dr = linear::Vec2<float>{1765, 1765};
+        linear::Vec2<float> init_pos = robot_pos.static_frame.pos;
+        auto_mode_callback = [&, start_time, duration_time, dr, init_pos](){
+          float ratio = min((current_time - start_time) / duration_time, 1.0f);
+          auto dest_pos = init_pos + ratio * dr;
+          float Kp = 5.0f;
+          auto fb_vel = -Kp * (robot_pos.static_frame.pos - dest_pos);
+
+          if(ratio < 1.0f){
+            v_dest = dest_pos / duration_time + fb_vel;
+          }else{
+            if (PS4.Triangle()){
+              return true;
+            }
+            v_dest = fb_vel;
+          }
+          return false;
+        };
       }
     } else if (mode == Mode::Auto){
       if(auto_mode_callback()){
         mode = Mode::Manual;
       }
     }
-    //Serial.printf("%f %f %f %f \n", current_time, v_dest.x, v_dest.y, theta_dest);
+    Serial.printf("%f %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
+    Serial.printf("%f %f %f %f %f %f %f\n", 
+      current_time,
+      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+    );
 
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+
   }
 
+  /*
   Serial.printf("%f %f %f %f %f %f %f\n", 
     current_time,
     robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
     robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
   );
+  */
 }
 }
