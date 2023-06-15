@@ -137,14 +137,14 @@ void taskCallback() {
   current_time = micros() / (1000.0f * 1000.0f);
   // 緊急停止処理
   bool emergency_button = PS4.Cross();
-  if(emergency_button){
+  if(emergency_button || (!PS4.isConnected())){
     mode = Mode::Emergency;
   }
   if(mode == Mode::Emergency){
     CommandValue::wheel_vx = 0.0f;
     CommandValue::wheel_vy = 0.0f;
     CommandValue::wheel_vw = 0.0f;
-    if(!emergency_button){
+    if(PS4.isConnected() && (!emergency_button)){
       mode = Mode::Manual;
     }
   }
