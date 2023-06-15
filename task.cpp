@@ -73,7 +73,7 @@ float readStickRaw(int8_t x) {
 Vec2<float> readStick() {
   return Vec2<float>(
     readStickRaw(PS4.LStickX()),
-    readStickRaw(PS4.RStickY()),
+    readStickRaw(PS4.RStickY())
   );
 }
 bool isStickInterrupt() {
@@ -88,7 +88,7 @@ void setAutoRot(float duration, float dTheta){
   float theta0 = theta_dest;
   auto_mode_callback = [&, duration, dTheta, start_time, theta0](){
     float ratio = (current_time - start_time) / duration;
-    theta_dest = theta_dest0 +  dThta * min(ratio, 1.0f);
+    theta_dest = theta0 +  dTheta * min(ratio, 1.0f);
     omega_dest = dTheta / duration;
     return (ratio >= 1.0f);
   };

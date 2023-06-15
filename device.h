@@ -2,7 +2,7 @@
 
 // センサ値
 namespace SensorValue {
-extern volatile float imu_yaw;
+extern volatile float gyro_theta;
 extern volatile float optical_flow_vx;
 extern volatile float optical_flow_vy;
 }

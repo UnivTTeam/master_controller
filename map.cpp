@@ -11,10 +11,10 @@ void initMap()
 
 void updateMap(){
   // 角速度を求める
-  static float last_imu_yaw = SensorValue::imu_yaw;
-  float dTheta = std::remainder(SensorValue::imu_yaw - last_imu_yaw, 2 * M_PI);
+  static float last_gyro_theta = SensorValue::gyro_theta;
+  float dTheta = std::remainder(SensorValue::gyro_theta - last_gyro_theta, 2 * M_PI);
   float omega = dTheta / Params::control_interval_sec;
-  last_imu_yaw = SensorValue::imu_yaw;
+  last_gyro_theta = SensorValue::gyro_theta;
 
   // フィールド座標系からオプティカルフロー座標系への変換を求める
   Transform::StaticTransform<float> optical_flow_static_frame = 

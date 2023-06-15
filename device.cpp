@@ -19,7 +19,7 @@ LSM9DS1 imu;
 
 // センサ値
 namespace SensorValue {
-volatile float imu_yaw = 0.0f;
+volatile float gyro_theta = 0.0f;
 volatile float optical_flow_vx = 0.0f;
 volatile float optical_flow_vy = 0.0f;
 }
@@ -125,7 +125,7 @@ void getIMU() {  //IMUの値を取得する関数
 
 void readDevice() {
   // デバイス情報を読み込み
-  SensorValue::imu_yaw = Params::gyro_scale * imu_yaw;
+  SensorValue::gyro_theta = Params::gyro_scale * imu_yaw;
   updateOpticalFlowVelocity();
 }
 
