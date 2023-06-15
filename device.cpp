@@ -1,12 +1,12 @@
 #include "device.h"
 #include "flow.h"
 #include "params.h"
-#include "common.h"
 
 #include <MadgwickAHRS.h>
 Madgwick MadgwickFilter;
 
 #include <Arduino.h>
+#include <cstring>
 
 #include <Wire.h>
 #include <SparkFunLSM9DS1.h>
@@ -39,16 +39,24 @@ void setupIMU() {
 }
 
 void setupDevice() {
+  // ニクロム線の初期化
+  for(const auto& pin_set : Params::ELEVATOR_PIN) {
+    for(const auto& pin : pin_set) {
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, LOW);
+    }    
+  }
+
   Serial.begin(115200);
   Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
   Wire.begin();
-  setupIMU();
+  setupIMU();  
 }
 
 bool imu_calibration_now = true;
 float stime = 0.0f;
-const float imu_calibration_time_us = Params::imu_calibration_time_sec * 1000.0f * 1000.0f;
-const float imu_calibration_start_time_us = Params::imu_calibration_start_time_sec * 1000.0f * 1000.0f;
+constexpr float imu_calibration_time_us = Params::imu_calibration_time_sec * 1000.0f * 1000.0f;
+constexpr float imu_calibration_start_time_us = Params::imu_calibration_start_time_sec * 1000.0f * 1000.0f;
 float imu_drift = 0.0f;
 
 void getIMU() {  //IMUの値を取得する関数
@@ -129,20 +137,22 @@ volatile float wheel_vy = 0.0f;
 volatile float wheel_vw = 0.0f;
 }
 
+void sendFloatValue(float value){
+  uint8_t bytes[4];
+  memcpy(bytes, &value, sizeof(float));
+
+  for(int i=0; i<4; i++){
+      Wire.write(bytes[i]);
+  }
+}
+
 void sendDataToChild() {
-  //グローバル変数wheel_vx,wheel_vy,wheel_vwを読み込み
-  uint8_t vx = encode_float(CommandValue::wheel_vx, Params::MAX_PARA_VEL);
-  uint8_t vy = encode_float(CommandValue::wheel_vy, Params::MAX_PARA_VEL);
-  uint8_t vw = encode_float(CommandValue::wheel_vw, Params::MAX_ROT_VEL);
-
-  uint8_t modeid = 0;
-
-  // Serial.printf("%d %d %d\n", vx, vy, vw);
-
   Wire.beginTransmission(I2C_DEV_ADDR);
-  Wire.write(vx);
-  Wire.write(vy);
-  Wire.write(vw);
-  Wire.write(modeid);
+
+  //グローバル変数wheel_vx,wheel_vy,wheel_vwを送信
+  sendFloatValue(CommandValue::wheel_vx);
+  sendFloatValue(CommandValue::wheel_vy);
+  sendFloatValue(CommandValue::wheel_vw);
+
   uint8_t error = Wire.endTransmission(true);
 }

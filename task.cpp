@@ -45,6 +45,7 @@ private:
 
 linear::Vec2<float> v_dest(0.0f, 0.0f);
 float theta_dest = Params::init_pos.rot.getAngle();
+float omega_dest = 0.0f;
 
 Mode mode = Mode::Manual;
 int elevator_state = 0;
@@ -69,32 +70,36 @@ float stickToVelocity(int8_t stick_input){
 }
 
 void taskCallback() {
-  current_time = micros() / 1000000.0f;
+  current_time = micros() / (1000.0f * 1000.0f);
   // 緊急停止処理
   if(PS4.Touchpad()){
     mode = Mode::Emergency;
-  }  
+  }
   if(mode == Mode::Emergency){
     CommandValue::wheel_vx = 0.0f;
     CommandValue::wheel_vy = 0.0f;
     CommandValue::wheel_vw = 0.0f;
+    if(!PS4.Touchpad()){
+      mode = Mode::Manual;
+    }
   }
   
   if(mode != Mode::Emergency){
     // 熊手処理
     if(kumade_wrapper(PS4.Circle())){
-      if(elevator_state == 0){
-        Serial.printf("熊手を上げる処理1\n");
-      }else if(elevator_state == 1){
-        Serial.printf("熊手を上げる処理2\n");
-      }else if(elevator_state == 2){
-        Serial.printf("熊手を上げる処理3\n");
+      if(elevator_state < 4){
+        Serial.printf("熊手を上げる処理 %d\n", elevator_state);
+        for(const auto& pin : Params::ELEVATOR_PIN[elevator_state]) {
+          pinMode(pin, OUTPUT);
+          digitalWrite(pin, LOW);
+        }
+        elevator_state++;
       }
-      elevator_state++;      
     }
 
     // 足回り処理
     v_dest = linear::Vec2<float>(0.0f, 0.0f);
+    omega_dest = 0.0f;
     if(mode == Mode::Manual) {
       // スティック入力
       v_dest.x = stickToVelocity(PS4.LStickX());
@@ -115,7 +120,9 @@ void taskCallback() {
         float theta_dest0 = theta_dest;
         auto_mode_callback = [&, start_time, theta_dest0](){
           float r = (current_time - start_time) / Params::l2r2_rot_time;
-          theta_dest = theta_dest0 + Params::l2r2_rot_angle * min(r, 1.0f);
+          float dThta = Params::l2r2_rot_angle;
+          theta_dest = theta_dest0 +  dThta * min(r, 1.0f);
+          omega_dest = dThta / Params::l2r2_rot_time;
           return (r >= 1.0f);
         };
       } else if (PS4.R2()) { // R2回転
@@ -124,7 +131,9 @@ void taskCallback() {
         float theta_dest0 = theta_dest;
         auto_mode_callback = [&, start_time, theta_dest0](){
           float r = (current_time - start_time) / Params::l2r2_rot_time;
-          theta_dest = theta_dest0 - Params::l2r2_rot_angle * min(r, 1.0f);
+          float dThta = -Params::l2r2_rot_angle;
+          theta_dest = theta_dest0 +  dThta * min(r, 1.0f);
+          omega_dest = dThta / Params::l2r2_rot_time;
           return (r >= 1.0f);
         };
       } else if (PS4.Cross()) {
@@ -132,7 +141,7 @@ void taskCallback() {
         float start_time = current_time;
         auto_mode_callback = [&, start_time](){
           float t = current_time - start_time;
-          v_dest.x = std::sin(10.0f * t);
+          v_dest.x = 0.2 * std::sin(10.0f * t);
           return (t >= 1.0f);
         };
       }

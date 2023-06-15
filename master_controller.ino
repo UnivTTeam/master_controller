@@ -11,22 +11,29 @@ void setup() {
   Task::setupTask();
 }
 
+constexpr float CONTROL_INTERVAL_US = Params::CONTROL_INTERVAL_MS * 1000.0f;
+
 void loop() {
-  using Params::device_interval_us;
-  static float last_device_time = micros() - device_interval_us;
-  if(micros() - last_device_time >= device_interval_us) {
-    last_device_time = micros();
+  // 現在時刻
+  static float last_control_time_us = micros() - CONTROL_INTERVAL_US;
+  float current_time_us = micros();
+  float interval_us = current_time_us - last_control_time_us;
+
+  if (interval_us >= CONTROL_INTERVAL_US) {
+    // 時刻情報アップデート
+    last_control_time_us = current_time_us;
+    Params::control_interval_sec = interval_us / (1000.0f * 1000.0f);
+
+    // デバイス情報アップデート
     get_flow();
     getIMU();
-  }
-  
-  using Params::control_interval_us;
-  static float last_control_time = micros() - control_interval_us;
-  if (micros() - last_control_time >= control_interval_us) {
-    last_control_time = micros();
     readDevice();
+
+    // 制御
     updateMap();
     Task::taskCallback();
+
+    // 子機に送信
     sendDataToChild();
   }
 }
