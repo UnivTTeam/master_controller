@@ -18,10 +18,10 @@ inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, 0.0f * M_PI)
 inline const Transform::StaticTransform<float> optical_flow_pos(92.0f, 237.0f, 0.5f * M_PI);
 
 // 制御パラメタ
-inline constexpr float rotKp = 5.0f;
+inline constexpr float rotKp = 4.0f;
 inline constexpr float l1r1_rot_angle = (3.0f/180.0f) * M_PI;
 inline constexpr float l2r2_rot_angle = 0.5f * M_PI;
-inline constexpr float l2r2_rot_time = 0.5f;
+inline constexpr float l2r2_rot_time = 1.0f;
 
 inline constexpr float imu_calibration_time_sec = 5.0f;
 inline constexpr float imu_calibration_start_time_sec = 3.0f;

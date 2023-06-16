@@ -19,6 +19,7 @@ void setupDevice();
 
 // IMUの読み込み
 void getIMU();
+bool imuNotCaliblated();
 
 // デバイス読み込み
 void readDevice();

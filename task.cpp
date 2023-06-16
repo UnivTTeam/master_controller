@@ -87,7 +87,7 @@ void setAutoRot(float duration, float dTheta){
   float start_time = current_time;
   float theta0 = theta_dest;
   float end_ratio = 1.0f - 1.0f / (Params::rotKp * duration);
-  auto_mode_callback = [&, duration, dTheta, start_time, theta0](){
+  auto_mode_callback = [&, duration, dTheta, start_time, theta0, end_ratio](){
     float ratio = (current_time - start_time) / duration;
     if(ratio < end_ratio){
         theta_dest = theta0 +  dTheta * min(ratio, 1.0f);
@@ -142,7 +142,7 @@ void taskCallback() {
   current_time = micros() / (1000.0f * 1000.0f);
   // 緊急停止処理
   bool emergency_button = PS4.Cross();
-  if(emergency_button || (!PS4.isConnected())){
+  if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
     mode = Mode::Emergency;
   }
   if(mode == Mode::Emergency){
@@ -177,11 +177,11 @@ void taskCallback() {
 
       // L1 R1による角度微調整
       if (l1_wrapper(PS4.L1())) {
-        float dtheta = Params::l1r1_rot_angle;
+        float dtheta = -Params::l1r1_rot_angle;
         robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
       }
       if (r1_wrapper(PS4.R1())) {
-        float dtheta = -Params::l1r1_rot_angle;
+        float dtheta = Params::l1r1_rot_angle;
         robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
       }
 
@@ -199,22 +199,20 @@ void taskCallback() {
         mode = Mode::Manual;
       }
     }
-    Serial.printf("%f %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
-    Serial.printf("%f %f %f %f %f %f %f\n", 
-      current_time,
-      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-    );
 
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   }
 
   /*
-  Serial.printf("%f %f %f %f %f %f %f\n", 
-    current_time,
+  Serial.printf("t: %f dest: %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
+  Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
     robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
     robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
   );
   */
+
+  Serial.printf("t: %f ofu: %f %f theta: %f\n", 
+    current_time, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
+
 }
 }

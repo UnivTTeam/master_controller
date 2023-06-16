@@ -123,6 +123,10 @@ void getIMU() {  //IMUの値を取得する関数
   // Serial.printf("%f %f\n", micros()/1000000.f, imu_yaw);
 }
 
+bool imuNotCaliblated(){
+  return imu_calibration_now;
+}
+
 void readDevice() {
   // デバイス情報を読み込み
   SensorValue::gyro_theta = Params::gyro_scale * imu_yaw;
