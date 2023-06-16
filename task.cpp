@@ -86,10 +86,15 @@ void setAutoRot(float duration, float dTheta){
 
   float start_time = current_time;
   float theta0 = theta_dest;
+  float end_ratio = 1.0f - 1.0f / (Params::rotKp * duration);
   auto_mode_callback = [&, duration, dTheta, start_time, theta0](){
     float ratio = (current_time - start_time) / duration;
-    theta_dest = theta0 +  dTheta * min(ratio, 1.0f);
-    omega_dest = dTheta / duration;
+    if(ratio < end_ratio){
+        theta_dest = theta0 +  dTheta * min(ratio, 1.0f);
+        omega_dest = dTheta / duration;
+    }else{
+        theta_dest = theta0 +  dTheta;
+    }
     return (ratio >= 1.0f);
   };
 }
