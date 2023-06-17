@@ -23,7 +23,7 @@ Mode mode = Mode::Manual;
 
 const int switch_minimum_interval = 100;
 struct SwitchUpperTrigger {
-  SwitchUpperTrigger() : last_state(false), last_time(millis())
+  SwitchUpperTrigger() : last_state(true), last_time(millis())
   {
   }
 
@@ -51,12 +51,29 @@ Vec2<float> v_dest(0.0f, 0.0f);
 float theta_dest = Params::init_pos.rot.getAngle();
 float omega_dest = 0.0f;
 
-int elevator_state = 0;
 float current_time = 0.0f;
 
 std::function<bool()> auto_mode_callback = []() { return true; };
 
-SwitchUpperTrigger kumade_wrapper = SwitchUpperTrigger();
+int elevator_step = 0;
+std::function<bool()> elevator_callback = []() { return true; };
+
+void reset_elevator_callback()
+{
+  elevator_callback = [](){
+    for(const auto& pin : Params::ELEVATOR_PIN) {
+      digitalWrite(pin, LOW);
+    }
+    return true;
+  };
+}
+
+
+SwitchUpperTrigger up_wrapper = SwitchUpperTrigger();
+SwitchUpperTrigger left_wrapper = SwitchUpperTrigger();
+SwitchUpperTrigger right_wrapper = SwitchUpperTrigger();
+SwitchUpperTrigger down_wrapper = SwitchUpperTrigger();
+
 SwitchUpperTrigger l1_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger r1_wrapper = SwitchUpperTrigger();
 
@@ -100,12 +117,13 @@ void setAutoRot(float duration, float dTheta){
   };
 }
 
-void setAutoPara(float duration, const Vec2<float>& dr){
+void setAutoPara(float duration, float x, float y){
   mode = Mode::Auto;
 
   float start_time = current_time;
   Vec2<float> init_pos = robot_pos.static_frame.pos;
-  auto_mode_callback = [&, start_time, duration, dr, init_pos](){
+  Vec2<float> dr(x, y);
+  auto_mode_callback = [&, duration, start_time, init_pos, dr](){
     float ratio = min((current_time - start_time) / duration, 1.0f);
     auto dest_pos = init_pos + ratio * dr;
 
@@ -119,7 +137,7 @@ void setAutoPara(float duration, const Vec2<float>& dr){
 
     v_dest = ff_vel + fb_vel;
 
-    return isStickInterrupt;
+    return isStickInterrupt();
   };
 }
 
@@ -141,10 +159,20 @@ void setAutoGTGT(){
 
 void taskCallback() {
   current_time = micros() / (1000.0f * 1000.0f);
-  if(mode == Mode::MapParam){
-    Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
-      current_time, Params::control_interval_sec, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
-  }else{
+  v_dest = Vec2<float>(0.0f, 0.0f);
+  omega_dest = 0.0f;
+
+  // ボタン読み込み
+  bool is_end = elevator_callback();
+  bool up = up_wrapper(PS4.Up());
+  bool left = up_wrapper(PS4.Left());
+  bool right = up_wrapper(PS4.Right());
+  bool down = up_wrapper(PS4.Down());
+  bool l1 = l1_wrapper(PS4.L1());
+  bool r1 = r1_wrapper(PS4.R1());
+
+  // モード読み込み
+  if(mode == Mode::Emergency || mode == Mode::Maual || mode == Mode::Auto){
     // 緊急停止処理
     bool emergency_button = PS4.Cross();
     if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
@@ -154,66 +182,108 @@ void taskCallback() {
       CommandValue::wheel_vx = 0.0f;
       CommandValue::wheel_vy = 0.0f;
       CommandValue::wheel_vw = 0.0f;
+      for(const auto& pin : Params::ELEVATOR_PIN) {
+        digitalWrite(pin, LOW);
+      }
       if(PS4.isConnected() && (!emergency_button)){
         mode = Mode::Manual;
       }
     }
-    
-    if(mode != Mode::Emergency){
-      // 熊手処理
-      if(kumade_wrapper(PS4.Up())){
-        elevator_state++;
-        Serial.printf("熊手上昇指令 %d\n", elevator_state);
-      }
-      using Params::ELEVATOR_PIN;
-      for(int i=0; i<ELEVATOR_PIN.size(); i++){
-        bool tf = (i < elevator_state);
-        for(const auto& pin : ELEVATOR_PIN[i]){
-          digitalWrite(pin, tf);
-        }
-      }
+  }
+  if(mode == Mode::Manual) {
+    // モード受付
+    if (PS4.L2()) { // L2回転
+      setAutoRot(Params::l2r2_rot_time, Params::l2r2_rot_angle);
+    } else if (PS4.R2()) { // R2回転
+      setAutoRot(Params::l2r2_rot_time, -Params::l2r2_rot_angle);
+    } else if (PS4.Triangle()) {
+      setAutoGTGT();
+    } else if (PS4.Circle()) {
+    } else if (PS4.Square()){
+      setAutoPara(4.0f, 1760.0f, 1760.0f);
+    }
+  }
+  // 子機にモードを送信
+  if(mode == Mode::Emergency){
+    CommandValue::slave_emergency = 0xff;
+  }else{
+    CommandValue::slave_emergency = 0;
+  }
 
-      // 足回り処理
-      v_dest = Vec2<float>(0.0f, 0.0f);
-      omega_dest = 0.0f;
-      if(mode == Mode::Manual) {
-        // スティック入力
-        v_dest = Params::MAX_PARA_VEL * readStick();
 
-        // L1 R1による角度微調整
-        if (l1_wrapper(PS4.L1())) {
-          float dtheta = -Params::l1r1_rot_angle;
-          robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-        }
-        if (r1_wrapper(PS4.R1())) {
-          float dtheta = Params::l1r1_rot_angle;
-          robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-        }
+  // インジケータ―
+  if(imuNotCaliblated()){
+    int t = (current_time*5.0f);
+    digitalWrite(Params::GREEN_LED, t%2);
+  }else if(mode == Mode::Emergency){
+    digitalWrite(Params::GREEN_LED, false);
+  }else if(mode == Mode::Manual || mode == Mode::Auto){
+    digitalWrite(Params::GREEN_LED, true);
+  }else{
+    digitalWrite(Params::GREEN_LED, false);
+  }
 
-        // モード受付
-        if (PS4.L2()) { // L2回転
-          setAutoRot(Params::l2r2_rot_time, Params::l2r2_rot_angle);
-        } else if (PS4.R2()) { // R2回転
-          setAutoRot(Params::l2r2_rot_time, -Params::l2r2_rot_angle);
-        } else if (PS4.Triangle()) {
-          setAutoGTGT();
-        } else if (PS4.Circle()) {
-        }
-      } else if (mode == Mode::Auto){
-        if(auto_mode_callback()){
-          mode = Mode::Manual;
-        }
-      }
-
-      setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+  // 熊手処理
+  if(mode == Mode::Manual || mode == Mode::Auto){
+    if(right){
+      reset_elevator_callback();
+    }
+    if(left){
+      reset_elevator_callback();
+      elevator_step--;
     }
 
-    Serial.printf("t: %f dest: %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
+    if(is_end & up){
+      Serial.printf("熊手上昇指令 %d\n", elevator_step);
+      int target_pin = elevator_step;
+      float start_time = current_time;
+      elevator_callback = [&, target_pin, start_time]{
+        bool is_end = (current_time > start_time + Params::ELEVATOR_TIME);
+        for(int i=0; i<Params::ELEVATOR_PIN.size(); i++){
+          digitalWrite(Params::ELEVATOR_PIN[i], (!is_end) & (i==target_pin));
+        }
+        return is_end;
+      };
+      elevator_step++;
+    }
+  }
+
+  // 足回り処理
+  if(mode == Mode::Manual) {
+    // L1 R1による角度微調整
+    if (l1) {
+      float dtheta = -Params::l1r1_rot_angle;
+      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
+    }
+    if (r1) {
+      float dtheta = Params::l1r1_rot_angle;
+      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
+    }
+
+    // スティック入力
+    v_dest = Params::MAX_PARA_VEL * readStick();
+    setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+  } else if (mode == Mode::Auto){
+    if(auto_mode_callback()){
+      mode = Mode::Manual;
+    }
+    setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+  }
+
+
+  // ログ
+  if(mode == Mode::Emergency || mode == Mode::Maual || mode == Mode::Auto){
+    Serial.printf("t: %f dest: %f %f %f ",
+      current_time, 
+      v_dest.x, v_dest.y, theta_dest);
     Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
       robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
       robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
     );
+  } else {
+    Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
+      current_time, Params::control_interval_sec, 
+      SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, 
+      robot_pos.static_frame.rot.getAngle());
   }
-
-}
 }

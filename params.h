@@ -15,7 +15,7 @@ inline float control_interval_sec = CONTROL_INTERVAL_MS / 1000.f;
 inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, 0.0f * M_PI);
 
 // マシン座標上のオプティカルフロー位置(x, y, theta)
-inline const Transform::StaticTransform<float> optical_flow_pos(92.0f, 237.0f, 0.11081918564029625);
+inline const Transform::StaticTransform<float> optical_flow_pos(92.0f, 237.0f, 0.04425343466456355f);
 
 // 制御パラメタ
 inline constexpr float rotKp = 4.0f;
@@ -33,6 +33,12 @@ inline constexpr float gyro_scale = 4.05f; // [4.048290243592277, 4.050555545499
 inline constexpr float optical_flow_scale = 47.9230059159935f; // 90.05186170389779f;
 
 // ニクロム線のピン番号
-inline const std::array<std::vector<int>, 5> ELEVATOR_PIN = {{{13},{14},{27},{26},{25}}};
+inline const std::vector<int> ELEVATOR_PIN = {{13,14,27,26,25}};
+inline constexpr float ELEVATOR_TIME = 2.5f;
+
+// LED
+inline constexpr int RED_LED = 35;
+inline constexpr int YELLOW_LED = 34;
+inline constexpr int GREEN_LED = 32;
 }
 

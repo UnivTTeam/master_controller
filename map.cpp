@@ -20,7 +20,7 @@ void updateMap(){
   Transform::StaticTransform<float> optical_flow_static_frame = 
       robot_pos.staticTransform() + Params::optical_flow_pos;
   linear::Vec2<float> optical_flow_vel = 
-      Params::optical_flow_scale * linear::Vec2<float>(SensorValue::optical_flow_vx, -SensorValue::optical_flow_vy);
+      Params::optical_flow_scale * linear::Vec2<float>(SensorValue::optical_flow_vy, SensorValue::optical_flow_vx);
   Transform::DynamicTransform<float> optical_flow_dynamic_frame0(optical_flow_static_frame.rot * optical_flow_vel, omega);
   
   Transform::MultidiffTransform<float, 1> optical_flow_frame(optical_flow_static_frame, optical_flow_dynamic_frame0);

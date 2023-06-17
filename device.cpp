@@ -40,12 +40,18 @@ void setupIMU() {
 
 void setupDevice() {
   // ニクロム線の初期化
-  for(const auto& pin_set : Params::ELEVATOR_PIN) {
-    for(const auto& pin : pin_set) {
-      pinMode(pin, OUTPUT);
-      digitalWrite(pin, LOW);
-    }    
+  for(const auto& pin : Params::ELEVATOR_PIN) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
   }
+
+  // LEDの初期化
+  pinMode(Params::RED_LED, OUTPUT);
+  pinMode(Params::YELLOW_LED, OUTPUT);
+  pinMode(Params::GREEN_LED, OUTPUT);
+  digitalWrite(Params::RED_LED, LOW);
+  digitalWrite(Params::YELLOW_LED, LOW);
+  digitalWrite(Params::GREEN_LED, LOW);
 
   Serial.begin(115200);
   Serial2.begin(19200, SERIAL_8N1, 19, 18);//オプティカルフロー用シリアル通信
@@ -136,6 +142,7 @@ void readDevice() {
 
 // 指令値
 namespace CommandValue {
+volatile uint8_t slave_emergency = 0;
 volatile float wheel_vx = 0.0f;
 volatile float wheel_vy = 0.0f;
 volatile float wheel_vw = 0.0f;
@@ -153,10 +160,18 @@ void sendFloatValue(float value){
 void sendDataToChild() {
   Wire.beginTransmission(I2C_DEV_ADDR);
 
+  // モードを送信
+  Wire.write(CommandValue::slave_emergency);
+
   //グローバル変数wheel_vx,wheel_vy,wheel_vwを送信
   sendFloatValue(CommandValue::wheel_vx);
   sendFloatValue(CommandValue::wheel_vy);
   sendFloatValue(CommandValue::wheel_vw);
 
+  //位置を送信
+  sendFloatValue(robot_pos.static_frame.pos.x);
+  sendFloatValue(robot_pos.static_frame.pos.y);
+  sendFloatValue(robot_pos.static_frame.rot.getAngle());
+  
   uint8_t error = Wire.endTransmission(true);
 }
