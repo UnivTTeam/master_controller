@@ -17,6 +17,7 @@ enum class Mode : int {
   Emergency = -1,
   Manual = 0,
   Auto = 1,
+  MapParam = 2,
 };
 
 const int switch_minimum_interval = 100;
@@ -203,16 +204,16 @@ void taskCallback() {
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   }
 
-  /*
-  Serial.printf("t: %f dest: %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
-  Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
-    robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-    robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-  );
-  */
-
-  Serial.printf("t: %f ofu: %f %f theta: %f\n", 
-    current_time, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
+  if(mode == Mode::MapParam){
+    Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
+      current_time, Params::control_interval, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
+  }else{
+    Serial.printf("t: %f dest: %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
+    Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
+      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+    );
+  }
 
 }
 }

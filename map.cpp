@@ -22,7 +22,7 @@ void updateMap(){
   linear::Vec2<float> optical_flow_vel = 
       Params::optical_flow_scale * linear::Vec2<float>(SensorValue::optical_flow_vx, -SensorValue::optical_flow_vy);
   Transform::DynamicTransform<float> optical_flow_dynamic_frame0(optical_flow_static_frame.rot * optical_flow_vel, omega);
-      
+  
   Transform::MultidiffTransform<float, 1> optical_flow_frame(optical_flow_static_frame, optical_flow_dynamic_frame0);
   
   // フィールド座標系からマシン座標系への変換を求める
