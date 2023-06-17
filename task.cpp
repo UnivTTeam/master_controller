@@ -19,7 +19,7 @@ enum class Mode : int {
   Auto = 1,
   MapParam = 2,
 };
-Mode mode = Mode::MapParam;
+Mode mode = Mode::Manual;
 
 const int switch_minimum_interval = 100;
 struct SwitchUpperTrigger {
@@ -47,13 +47,7 @@ private:
   int last_time;
 };
 
-Vec2<float> v_dest(0.0f, 0.0f);
-float theta_dest = Params::init_pos.rot.getAngle();
-float omega_dest = 0.0f;
-
 float current_time = 0.0f;
-
-std::function<bool()> auto_mode_callback = []() { return true; };
 
 int elevator_step = 0;
 std::function<bool()> elevator_callback = []() { return true; };
@@ -61,13 +55,28 @@ std::function<bool()> elevator_callback = []() { return true; };
 void reset_elevator_callback()
 {
   elevator_callback = [](){
-    for(const auto& pin : Params::ELEVATOR_PIN) {
-      digitalWrite(pin, LOW);
+    for(const auto& pins : Params::ELEVATOR_PINS) {
+      for(const auto& pin : pins) {
+        digitalWrite(pin, LOW);
+      }
     }
     return true;
   };
 }
 
+void setElevatorCallback() {
+  int target_pin = elevator_step;
+  float start_time = current_time;
+  elevator_callback = [&, target_pin, start_time]{
+    bool is_end = (current_time > start_time + Params::ELEVATOR_TIME);
+    for(int i=0; i<Params::ELEVATOR_PINS.size(); i++){
+      for(const auto& pin : Params::ELEVATOR_PINS[i]) {
+        digitalWrite(pin, (!is_end) & (i==target_pin));
+      }
+    }
+    return is_end;
+  };
+}
 
 SwitchUpperTrigger up_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger left_wrapper = SwitchUpperTrigger();
@@ -83,7 +92,7 @@ void setupTask() {
 
 float readStickRaw(int8_t x) {
   float ratio = static_cast<float>(x) / 128.0f;
-  if(abs(ratio) < 0.1f){
+  if(abs(ratio) < 0.16f){
     ratio = 0.0f;
   }
   return ratio;
@@ -94,50 +103,141 @@ Vec2<float> readStick() {
     readStickRaw(PS4.RStickY())
   );
 }
-bool isStickInterrupt() {
-  Vec2<float> stick = readStick();
-  return (stick.x != 0.0f) | (stick.y != 0.0f);
+bool interruptAutoMode() {
+  return (readStick().norm() != 0.0f);
 }
 
-void setAutoRot(float duration, float dTheta){
+Vec2<float> v_dest(0.0f, 0.0f);
+float theta_dest = Params::init_pos.rot.getAngle();
+float omega_dest = 0.0f;
+
+std::function<bool()> auto_mode_callback = []() { return true; };
+
+/*
+enum class AutoControlStep : int {
+  Acc = 0,
+  MaxVel = 1,
+  Dec = 2,
+  StopControl = 3,
+};
+Mode auto_control_mode = AutoControlStep::Acc;
+*/
+
+void setAutoRot(bool reverse){
   mode = Mode::Auto;
 
-  float start_time = current_time;
+  float t0 = current_time;
   float theta0 = theta_dest;
-  float end_ratio = 1.0f - 1.0f / (Params::rotKp * duration);
-  auto_mode_callback = [&, duration, dTheta, start_time, theta0, end_ratio](){
-    float ratio = (current_time - start_time) / duration;
-    if(ratio < end_ratio){
-        theta_dest = theta0 +  dTheta * min(ratio, 1.0f);
-        omega_dest = dTheta / duration;
+
+  float V = Params::AUTO_CONTROL_ROT_VEL;
+  float A = Params::AUTO_CONTROL_ROT_ACC;
+  float X = Params::AUTO_CONTROL_ROT_ANGLE;
+  float Xacc = V * V / A;
+  float Vmax = V;
+  float Tvel = 0.0f;
+  if(Xacc > X){
+    Vmax = std::sqrt(A * X);
+    Xacc = X;
+  }else{
+    Tvel = (X - Xacc) / Vmax; 
+  }
+  float Tacc = Vmax / A;
+  float Ttotal = Tacc + Tvel + Tacc;
+  if(reverse){
+    V = -V;
+    A = -A;
+    X = -X;
+    Xacc = -Xacc;
+    Vmax = -Vmax;
+  }
+  auto_mode_callback = [=, current_time, theta_dest, omega_dest](){
+    float t = current_time - t0;
+    bool is_end = false;
+    if(t < Tacc){
+      theta_dest = theta0 + 0.5f * A * t * t;
+      omega_dest = A * t;
+    }else if(t < Tacc + Tvel){
+      float dt = t - Tacc;
+      theta_dest = theta0 + 0.5f * Xacc + Vmax * dt;
+      omega_dest = Vmax;
+    }else if(t < Ttotal){
+      float t_ = Ttotal - t;
+      theta_dest = theta0 + X - 0.5f * A * t_ * t_;
+      omega_dest = A * t_;
     }else{
-        theta_dest = theta0 +  dTheta;
+      theta_dest = theta0 + X;
+      is_end = true;
     }
-    return (ratio >= 1.0f);
+
+    return is_end;
   };
 }
 
-void setAutoPara(float duration, float x, float y){
+bool near_end = false;
+float stop_control_end_time = 0.0f;
+void setAutoPara(float x, float y){
   mode = Mode::Auto;
+  near_end = false;
 
-  float start_time = current_time;
-  Vec2<float> init_pos = robot_pos.static_frame.pos;
-  Vec2<float> dr(x, y);
-  auto_mode_callback = [&, duration, start_time, init_pos, dr](){
-    float ratio = min((current_time - start_time) / duration, 1.0f);
-    auto dest_pos = init_pos + ratio * dr;
+  float t0 = current_time;
+  linear::Vec2<float> dr(x, y);
+  linear::Vec2<float> ex = (1.0f / dr.norm()) * dr;
+  linear::Vec2<float> ey(-ex.y, ex.x);
+  
+  linear::Vec2<float> r0 = robot_pos.static_frame.pos;
 
-    float Kp = 5.0f;
-    auto fb_vel = -Kp * (robot_pos.static_frame.pos - dest_pos);
+  float V = Params::AUTO_CONTROL_PARA_VEL;
+  float A = Params::AUTO_CONTROL_PARA_ACC;
+  float X = dr * ex;
+  float Xacc = V * V / A;
+  float Vmax = V;
+  float Tvel = 0.0f;
+  if(Xacc > X){
+    Vmax = std::sqrt(A * X);
+    Xacc = X;
+  }else{
+    Tvel = (X - Xacc) / Vmax; 
+  }
+  float Tacc = Vmax / A;
+  float Ttotal = Tacc + Tvel + Tacc;
+  auto_mode_callback = [=, current_time, v_dest, robot_pos, near_end, stop_control_end_time](){
+    bool is_end = false;
+    linear::Vec2<float> r = robot_pos.static_frame.pos - r0;
+    float x = r * ex;
+    float y = r * ey;
 
-    auto ff_vel = Vec2<float>(0.0f, 0.0f);
-    if(ratio < 1.0f){
-      ff_vel = dr / duration;
+    if(!near_end){
+      if(x > X - 0.5f * Xacc){
+        near_end = true;
+        stop_control_end_time = current_time + Tacc;
+      }
     }
 
-    v_dest = ff_vel + fb_vel;
+    float x_dest = 0.0f;
+    float vx_ff = 0.0f;
+    if(near_end){
+      float t_ = stop_control_end_time - current_time;
+      if(t_ > 0.0f){
+        x_dest = X - 0.5f * A * t_ * t_;
+        vx_ff = A * t_;
+      }else{
+        x_dest = X;
+        is_end = true;
+      }
+    }else if(x < 0.5f * Xacc){
+      float t = max(std::sqrt(2.0f * max(x, 0.0f) / A), 0.1f);
+      x_dest = x;
+      vx_ff = A * t;
+    }else{
+      x_dest = x;
+      vx_ff = Vmax;
+    }
 
-    return isStickInterrupt();
+    float vx = -Params::paraKp * (x-x_dest) + vx_ff;
+    float vy = -Params::paraKp * y;
+    v_dest = (vx*ex) + (vy*ey);
+
+    return interruptAutoMode();
   };
 }
 
@@ -146,14 +246,13 @@ void setAutoGTGT(){
 
   float start_time = current_time;
   auto_mode_callback = [&, start_time](){
-    float t = current_time - start_time;
-    int T = t;
-    if(T%2 == 0){
+    int t = ((current_time - start_time) * 2.0f);
+    if(t%2 == 0){
       v_dest.x = -500.0f;
     }else{
       v_dest.x = 450.0f;
     }
-    return isStickInterrupt();
+    return false;
   };
 }
 
@@ -179,12 +278,6 @@ void taskCallback() {
       mode = Mode::Emergency;
     }
     if(mode == Mode::Emergency){
-      CommandValue::wheel_vx = 0.0f;
-      CommandValue::wheel_vy = 0.0f;
-      CommandValue::wheel_vw = 0.0f;
-      for(const auto& pin : Params::ELEVATOR_PIN) {
-        digitalWrite(pin, LOW);
-      }
       if(PS4.isConnected() && (!emergency_button)){
         mode = Mode::Manual;
       }
@@ -193,18 +286,18 @@ void taskCallback() {
   if(mode == Mode::Manual) {
     // モード受付
     if (PS4.L2()) { // L2回転
-      setAutoRot(Params::l2r2_rot_time, Params::l2r2_rot_angle);
+      setAutoRot(false);
     } else if (PS4.R2()) { // R2回転
-      setAutoRot(Params::l2r2_rot_time, -Params::l2r2_rot_angle);
+      setAutoRot(true);
     } else if (PS4.Triangle()) {
       setAutoGTGT();
     } else if (PS4.Circle()) {
     } else if (PS4.Square()){
-      setAutoPara(4.0f, 1760.0f, 1760.0f);
+      setAutoPara(1760.0f, 1760.0f);
     }
   }
   // 子機にモードを送信
-  CommandValue::slave_emergency = (mode == Mode::Emergency);
+  CommandValue::slave_emergency = (mode == Mode::Emergency || mode == Mode::MapParam);
 
   // インジケータ―
   if(imuNotCaliblated()){
@@ -212,8 +305,11 @@ void taskCallback() {
     digitalWrite(Params::GREEN_LED, t%2);
   }else if(mode == Mode::Emergency){
     digitalWrite(Params::GREEN_LED, false);
-  }else if(mode == Mode::Manual || mode == Mode::Auto){
+  }else if(mode == Mode::Manual){
     digitalWrite(Params::GREEN_LED, true);
+  }else if(mode == Mode::Auto){
+    int t = (current_time*10.0f);
+    digitalWrite(Params::GREEN_LED, t%2);
   }else{
     digitalWrite(Params::GREEN_LED, false);
   }
@@ -230,16 +326,14 @@ void taskCallback() {
 
     if(is_end & up){
       Serial.printf("熊手上昇指令 %d\n", elevator_step);
-      int target_pin = elevator_step;
-      float start_time = current_time;
-      elevator_callback = [&, target_pin, start_time]{
-        bool is_end = (current_time > start_time + Params::ELEVATOR_TIME);
-        for(int i=0; i<Params::ELEVATOR_PIN.size(); i++){
-          digitalWrite(Params::ELEVATOR_PIN[i], (!is_end) & (i==target_pin));
-        }
-        return is_end;
-      };
+      setElevatorCallback();
       elevator_step++;
+    }
+  } else if(mode == Mode::Emergency){
+    for(const auto& pins : Params::ELEVATOR_PINS) {
+      for(const auto& pin : pins) {
+        digitalWrite(pin, LOW);
+      }
     }
   }
 
@@ -256,15 +350,18 @@ void taskCallback() {
     }
 
     // スティック入力
-    v_dest = Params::MAX_PARA_VEL * readStick();
+    v_dest = Params::MANUAL_MAX_PARA_VEL * readStick();
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   } else if (mode == Mode::Auto){
     if(auto_mode_callback()){
       mode = Mode::Manual;
     }
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+  } else if(mode == Mode::Emergency){
+    CommandValue::wheel_vx = 0.0f;
+    CommandValue::wheel_vy = 0.0f;
+    CommandValue::wheel_vw = 0.0f;
   }
-
 
   // ログ
   if(mode == Mode::Emergency || mode == Mode::Manual || mode == Mode::Auto){

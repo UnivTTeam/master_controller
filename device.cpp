@@ -41,9 +41,11 @@ void setupIMU() {
 
 void setupDevice() {
   // ニクロム線の初期化
-  for(const auto& pin : Params::ELEVATOR_PIN) {
-    pinMode(pin, OUTPUT);
-    digitalWrite(pin, LOW);
+  for(const auto& pins : Params::ELEVATOR_PINS) {
+    for(const auto& pin : pins) {
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, LOW);
+    }
   }
 
   // LEDの初期化
@@ -115,7 +117,7 @@ void getIMU() {  //IMUの値を取得する関数
   if(imu_calibration_now && stime > imu_calibration_time_us){
     float yaw = MadgwickFilter.getYaw() - 180.0f;
     imu_drift = (yaw - yaw0) / (stime - stime0);
-    imu_drift += 0.0000000003f;
+    //imu_drift += 0.0000000003f;
     imu_calibration_now = false;
   }
 
