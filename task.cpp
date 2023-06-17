@@ -19,6 +19,7 @@ enum class Mode : int {
   Auto = 1,
   MapParam = 2,
 };
+Mode mode = Mode::Manual;
 
 const int switch_minimum_interval = 100;
 struct SwitchUpperTrigger {
@@ -50,7 +51,6 @@ Vec2<float> v_dest(0.0f, 0.0f);
 float theta_dest = Params::init_pos.rot.getAngle();
 float omega_dest = 0.0f;
 
-Mode mode = Mode::Manual;
 int elevator_state = 0;
 float current_time = 0.0f;
 
@@ -141,73 +141,73 @@ void setAutoGTGT(){
 
 void taskCallback() {
   current_time = micros() / (1000.0f * 1000.0f);
-  // 緊急停止処理
-  bool emergency_button = PS4.Cross();
-  if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
-    mode = Mode::Emergency;
-  }
-  if(mode == Mode::Emergency){
-    CommandValue::wheel_vx = 0.0f;
-    CommandValue::wheel_vy = 0.0f;
-    CommandValue::wheel_vw = 0.0f;
-    if(PS4.isConnected() && (!emergency_button)){
-      mode = Mode::Manual;
+  if(mode == Mode::MapParam){
+    Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
+      current_time, Params::control_interval_sec, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
+  }else{
+    // 緊急停止処理
+    bool emergency_button = PS4.Cross();
+    if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
+      mode = Mode::Emergency;
     }
-  }
-  
-  if(mode != Mode::Emergency){
-    // 熊手処理
-    if(kumade_wrapper(PS4.Up())){
-      elevator_state++;
-      Serial.printf("熊手上昇指令 %d\n", elevator_state);
-    }
-    using Params::ELEVATOR_PIN;
-    for(int i=0; i<ELEVATOR_PIN.size(); i++){
-      bool tf = (i < elevator_state);
-      for(const auto& pin : ELEVATOR_PIN[i]){
-        digitalWrite(pin, tf);
-      }
-    }
-
-    // 足回り処理
-    v_dest = Vec2<float>(0.0f, 0.0f);
-    omega_dest = 0.0f;
-    if(mode == Mode::Manual) {
-      // スティック入力
-      v_dest = Params::MAX_PARA_VEL * readStick();
-
-      // L1 R1による角度微調整
-      if (l1_wrapper(PS4.L1())) {
-        float dtheta = -Params::l1r1_rot_angle;
-        robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-      }
-      if (r1_wrapper(PS4.R1())) {
-        float dtheta = Params::l1r1_rot_angle;
-        robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-      }
-
-      // モード受付
-      if (PS4.L2()) { // L2回転
-        setAutoRot(Params::l2r2_rot_time, Params::l2r2_rot_angle);
-      } else if (PS4.R2()) { // R2回転
-        setAutoRot(Params::l2r2_rot_time, -Params::l2r2_rot_angle);
-      } else if (PS4.Triangle()) {
-        setAutoGTGT();
-      } else if (PS4.Circle()) {
-      }
-    } else if (mode == Mode::Auto){
-      if(auto_mode_callback()){
+    if(mode == Mode::Emergency){
+      CommandValue::wheel_vx = 0.0f;
+      CommandValue::wheel_vy = 0.0f;
+      CommandValue::wheel_vw = 0.0f;
+      if(PS4.isConnected() && (!emergency_button)){
         mode = Mode::Manual;
       }
     }
+    
+    if(mode != Mode::Emergency){
+      // 熊手処理
+      if(kumade_wrapper(PS4.Up())){
+        elevator_state++;
+        Serial.printf("熊手上昇指令 %d\n", elevator_state);
+      }
+      using Params::ELEVATOR_PIN;
+      for(int i=0; i<ELEVATOR_PIN.size(); i++){
+        bool tf = (i < elevator_state);
+        for(const auto& pin : ELEVATOR_PIN[i]){
+          digitalWrite(pin, tf);
+        }
+      }
 
-    setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
-  }
+      // 足回り処理
+      v_dest = Vec2<float>(0.0f, 0.0f);
+      omega_dest = 0.0f;
+      if(mode == Mode::Manual) {
+        // スティック入力
+        v_dest = Params::MAX_PARA_VEL * readStick();
 
-  if(mode == Mode::MapParam){
-    Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
-      current_time, Params::control_interval, SensorValue::optical_flow_vx, SensorValue::optical_flow_vy, robot_pos.static_frame.rot.getAngle());
-  }else{
+        // L1 R1による角度微調整
+        if (l1_wrapper(PS4.L1())) {
+          float dtheta = -Params::l1r1_rot_angle;
+          robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
+        }
+        if (r1_wrapper(PS4.R1())) {
+          float dtheta = Params::l1r1_rot_angle;
+          robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
+        }
+
+        // モード受付
+        if (PS4.L2()) { // L2回転
+          setAutoRot(Params::l2r2_rot_time, Params::l2r2_rot_angle);
+        } else if (PS4.R2()) { // R2回転
+          setAutoRot(Params::l2r2_rot_time, -Params::l2r2_rot_angle);
+        } else if (PS4.Triangle()) {
+          setAutoGTGT();
+        } else if (PS4.Circle()) {
+        }
+      } else if (mode == Mode::Auto){
+        if(auto_mode_callback()){
+          mode = Mode::Manual;
+        }
+      }
+
+      setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+    }
+
     Serial.printf("t: %f dest: %f %f %f ", current_time, v_dest.x, v_dest.y, theta_dest);
     Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
       robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
