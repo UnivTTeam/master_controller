@@ -15,7 +15,7 @@ inline float control_interval_sec = CONTROL_INTERVAL_MS / 1000.f;
 inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, 0.0f * M_PI);
 
 // マシン座標上のオプティカルフロー位置(x, y, theta)
-inline const Transform::StaticTransform<float> optical_flow_pos(92.0f, 237.0f, 0.04425343466456355f);
+inline const Transform::StaticTransform<float> optical_flow_pos(-60.0f, 250.0f, 0.04425343466456355f);
 
 // 制御パラメタ
 inline constexpr float rotKp = 4.0f;

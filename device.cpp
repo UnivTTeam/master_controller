@@ -1,6 +1,7 @@
 #include "device.h"
 #include "flow.h"
 #include "params.h"
+#include "map.h"
 
 #include <MadgwickAHRS.h>
 Madgwick MadgwickFilter;
@@ -142,7 +143,7 @@ void readDevice() {
 
 // 指令値
 namespace CommandValue {
-volatile uint8_t slave_emergency = 0;
+volatile bool slave_emergency = 0;
 volatile float wheel_vx = 0.0f;
 volatile float wheel_vy = 0.0f;
 volatile float wheel_vw = 0.0f;
@@ -161,17 +162,21 @@ void sendDataToChild() {
   Wire.beginTransmission(I2C_DEV_ADDR);
 
   // モードを送信
-  Wire.write(CommandValue::slave_emergency);
-
-  //グローバル変数wheel_vx,wheel_vy,wheel_vwを送信
-  sendFloatValue(CommandValue::wheel_vx);
-  sendFloatValue(CommandValue::wheel_vy);
-  sendFloatValue(CommandValue::wheel_vw);
+  if(CommandValue::slave_emergency){
+    Wire.write(0xff);
+  }else{
+    Wire.write(0);
+  }
 
   //位置を送信
   sendFloatValue(robot_pos.static_frame.pos.x);
   sendFloatValue(robot_pos.static_frame.pos.y);
   sendFloatValue(robot_pos.static_frame.rot.getAngle());
   
+  //グローバル変数wheel_vx,wheel_vy,wheel_vwを送信
+  sendFloatValue(CommandValue::wheel_vx);
+  sendFloatValue(CommandValue::wheel_vy);
+  sendFloatValue(CommandValue::wheel_vw);
+
   uint8_t error = Wire.endTransmission(true);
 }

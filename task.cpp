@@ -19,7 +19,7 @@ enum class Mode : int {
   Auto = 1,
   MapParam = 2,
 };
-Mode mode = Mode::Manual;
+Mode mode = Mode::MapParam;
 
 const int switch_minimum_interval = 100;
 struct SwitchUpperTrigger {
@@ -172,7 +172,7 @@ void taskCallback() {
   bool r1 = r1_wrapper(PS4.R1());
 
   // モード読み込み
-  if(mode == Mode::Emergency || mode == Mode::Maual || mode == Mode::Auto){
+  if(mode == Mode::Emergency || mode == Mode::Manual || mode == Mode::Auto){
     // 緊急停止処理
     bool emergency_button = PS4.Cross();
     if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
@@ -204,12 +204,7 @@ void taskCallback() {
     }
   }
   // 子機にモードを送信
-  if(mode == Mode::Emergency){
-    CommandValue::slave_emergency = 0xff;
-  }else{
-    CommandValue::slave_emergency = 0;
-  }
-
+  CommandValue::slave_emergency = (mode == Mode::Emergency);
 
   // インジケータ―
   if(imuNotCaliblated()){
@@ -272,7 +267,7 @@ void taskCallback() {
 
 
   // ログ
-  if(mode == Mode::Emergency || mode == Mode::Maual || mode == Mode::Auto){
+  if(mode == Mode::Emergency || mode == Mode::Manual || mode == Mode::Auto){
     Serial.printf("t: %f dest: %f %f %f ",
       current_time, 
       v_dest.x, v_dest.y, theta_dest);
@@ -287,3 +282,4 @@ void taskCallback() {
       robot_pos.static_frame.rot.getAngle());
   }
 }
+} // namespace Task
