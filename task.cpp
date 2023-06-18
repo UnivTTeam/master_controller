@@ -123,6 +123,11 @@ void taskCallback() {
     } else if (PS4.Circle()) {
       autoTask();
     } else if (PS4.Square()){
+      auto_mode_callback = Route::GeneralRoute({
+        {1000.0f, 0.0f}, {0.5f * M_PI}, 
+        {0.0f, 1000.0f}, {0.5f * M_PI}, 
+        {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
+        {0.0f, -1000.0f}, {-0.5f * M_PI}});
       // setAutoPara(1760.0f, 1760.0f);
     }
   }
