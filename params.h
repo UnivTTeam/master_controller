@@ -10,6 +10,7 @@ namespace Params{
 // 制御周期: 20ms
 inline constexpr float CONTROL_INTERVAL_MS = 20.0f;
 inline float control_interval_sec = CONTROL_INTERVAL_MS / 1000.f;
+inline float current_time = 0.0f;
 
 // フィールド上の初期位置情報(x, y, theta)
 inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, 0.0f * M_PI);
@@ -29,7 +30,7 @@ inline constexpr float AUTO_CONTROL_PARA_VEL = 1600.0f;
 inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;
 
 inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
-inline constexpr float AUTO_CONTROL_ROT_VEL = 2.0f * M_PI;  // v=1500 <--> omega=3.5
+inline constexpr float AUTO_CONTROL_ROT_VEL = 2.5f * M_PI;  // v=1500 <--> omega=3.5
 inline constexpr float AUTO_CONTROL_ROT_ACC = 2.0f * M_PI;  // a=2000 <--> alpha=2.0
 
 inline constexpr float rotKp = 5.0f;
@@ -42,6 +43,7 @@ inline constexpr float optical_flow_scale = 42.2f; // 90.05186170389779f;
 // ニクロム線のピン番号
 inline const std::vector<std::vector<int>> ELEVATOR_PINS = {{{13,25},{14},{27},{26}}};
 inline constexpr float ELEVATOR_TIME = 2.5f;
+inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED
 inline constexpr int RED_LED = 35;
