@@ -92,6 +92,17 @@ bool RotRoute::operator()() {
   return bangbang.isEnd();
 }
 
+// RotAdjustRoute
+RotAdjustRoute::RotAdjustRoute() {
+  float theta_dest = Task::theta_dest;
+  Task::theta_dest = robot_pos.static_frame.rot.getAngle();
+  route = RotRoute(theta_dest - Task::theta_dest);
+}
+
+bool RotAdjustRoute::operator()() {
+  return route();
+}
+
 // ParaRoute
 ParaRoute::ParaRoute(float x, float y){
   near_end = false;
@@ -138,58 +149,78 @@ bool ParaRoute::operator()(){
   return Task::interruptAutoMode();
 }
 
-// ParaRotParaRoute
-ParaRotParaRoute::ParaRotParaRoute(
-    const Vec2<float>& dr0_, float theta_, const Vec2<float>& dr1_){
-  t0 = Params::current_time;
+// GeneralRoute
+GeneralRoute::GeneralRoute(
+    const std::vector<std::vector<float>>& data_,
+    int elevator_step_,
+    float elevator_move_length_)
+{
+  data = data_;
+  elevator_move_length = elevator_move_length_;
+
   step = -1;
-  need_elevetor_up = true;
+  elevator_step = elevator_step_;
+  if(elevator_step == -1){
+    elevator_step = data.size() + 100;
+  }
 
-  dr0 = dr0_;
-  theta = theta_;  
-  dr1 = dr1_;
-
-  Task::setAutoMode();
+  setNewRoute();
 }
 
-bool ParaRotParaRoute::operator()(){
-  if(step == -1){
+bool GeneralRoute::setNewRoute()
+{
+  if(step >= data.size()){
+    step = data.size();
+    return false;
+  }
+
+  step++;
+  while(step < data.size()){
+    std::vector<float> info = data[step];
+    if(info.size() == 2){
+      is_para_route = true;
+      para = ParaRoute(info[0], info[1]);
+      return true;
+    } else if(info.size() == 1){
+      is_para_route = false;
+      rot = RotRoute(info[0]);
+      return true;
+    }
     step++;
-    para = ParaRoute(dr0.x, dr0.y);
   }
-  if(step == 0){
-    para();
-    if(para.isEnd()){
-      step++;
-      rot = RotRoute(theta);
+  return false;
+}
+
+bool GeneralRoute::operator()(){
+  bool is_end = true;
+  while(is_end){
+    if(is_para_route){
+      para();
+      is_end = para.isEnd();
+    }else{
+      rot();
+      is_end = rot.isEnd();
     }
-  }
-  if(step == 1){
-    rot();
-    if(rot.isEnd()){
-      step++;
-      para = ParaRoute(dr1.x, dr1.y);
-      y0 = robot_pos.static_frame.pos.y;
-    }
-  }
-  if(step == 2){
-    para();
-    float dy = abs(y0 - robot_pos.static_frame.pos.y);
-    if(need_elevetor_up && dy > Params::ELEVATOR_UP_Y_DIFF){
-      Elevator::setElevator();
-      need_elevetor_up = false;
-    }
-    if(para.isEnd()){
-      step++;
-      para = ParaRoute(dr1.x, dr1.y);
-      if(need_elevetor_up) {
-        Elevator::setElevator();
-        need_elevetor_up = false;
-      }
+    if(is_end){
+      // 新ルートの取得に失敗したらis_endにfalseが入る
+      is_end = setNewRoute();
     }
   }
 
-  if(step == 2){
+  if(step >= elevator_step){
+    bool ok = true;
+    if(is_para_route){
+      ok = (para.getX() >= elevator_move_length);
+    }
+    if(ok){
+      Elevator::setElevator();
+      elevator_step = data.size() + 100;
+    }
+  }
+
+  if(step == data.size() -1 && is_para_route){
+    return Task::interruptAutoMode();
+  } else if(step == data.size()){
     return Task::interruptAutoMode();
   }
   return false;

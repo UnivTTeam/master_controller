@@ -1,13 +1,17 @@
 #pragma once
 #include <cmath>
+#include <vector>
 #include <Arduino.h>
 
 #include "libwheels/linear_algebra/linear_algebra.hpp"
+#include "params.h"
 
 namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
+// 経路の実態
+// 直接呼ぶことはない
 struct BangBang {
   BangBang(){}
   BangBang(float X_, float V_, float A_);
@@ -26,6 +30,7 @@ private:
   float Xacc, Vmax, Tacc, Tvel, Ttotal;
 };
 
+// 回転経路，与えられた角度だけ回転する
 struct RotRoute{
   RotRoute(){}
   RotRoute(float theta);
@@ -40,11 +45,25 @@ private:
   float dir;
 };
 
+// 回転経路，自己位置認識に基づいて回転方向を揃える
+struct RotAdjustRoute{
+  RotAdjustRoute();
+
+  bool isEnd() { return route.isEnd(); }
+  bool operator()();
+
+private:
+  RotRoute route;
+};
+
+
+// 並進経路
 struct ParaRoute{
   ParaRoute(){}
   ParaRoute(float x, float y);
 
   bool isEnd() { return bangbang.isEnd(); }
+  float getX() { return bangbang.getX(); }
   bool operator()();
 
 private:
@@ -56,25 +75,33 @@ private:
   Vec2<float> dr, ex, ey;
 };
 
-struct ParaRotParaRoute{
-  ParaRotParaRoute(const Vec2<float>& dr0_, float theta_, const Vec2<float>& dr1_);
+// 一般経路
+// 回転経路，並進経路を順番に実施
+//   dataのところが2次元vectorなら並進，1次元vectorなら回転
+// 途中で上昇機構を上げる場合，何番目(0-index)の経路で上げるか指定
+// また，移動開始直後に上げると干渉する場合があるので，elevator_move_length だけ移動してから上げる
+struct GeneralRoute {
+  GeneralRoute(
+    const std::vector<std::vector<float>>& data_,
+    int elevator_step_=-1,  // デフォルトは上昇機構なし
+    float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF);
 
+  bool setNewRoute();
   bool operator()();
 
 private:
-  float t0;
   int step;
-  float y0;
-  bool need_elevetor_up;
-
-  Vec2<float> dr0;
-  float theta;
-  Vec2<float> dr1;
+  int elevator_step;
   
+  std::vector<std::vector<float>> data;
+  float elevator_move_length;
+
+  bool is_para_route;
   RotRoute rot;
-  ParaRoute para;  
+  ParaRoute para;
 };
 
+// 最後のガタガタルート
 struct GTGTRoute{
   GTGTRoute();
 

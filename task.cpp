@@ -65,16 +65,15 @@ void autoTask()
 {
   using Elevator::setElevator;
   if(task_step==0){
-    setElevator();
-    auto_mode_callback = Route::ParaRoute(900.0f, 1200.0f + 350.0f);
+    auto_mode_callback = Route::GeneralRoute({{900.0f, 1550.0f}}, 0, 0.0f);
   }else if(task_step<=2){
     auto_mode_callback = Route::ParaRoute(2600.0f, 0.0f);
   }else if(task_step==3){
-    auto_mode_callback = Route::ParaRotParaRoute({700.0f, 0.0f}, M_PI, {0.0f, 4600.0f});
+    auto_mode_callback = Route::GeneralRoute({{700.0f, 0.0f}, {M_PI}, {0.0f, 4600.0f}}, 2);
   }else if(task_step<=5){
     auto_mode_callback = Route::ParaRoute(-2600.0f, 0.0f);
   }else if(task_step==6){
-    auto_mode_callback = Route::ParaRotParaRoute({-700.0f, 0.0f}, -M_PI, {-600.0f, -2300.0f});
+    auto_mode_callback = Route::GeneralRoute({{-600.0f, 0.0f}, {-M_PI}, {-700.0f, 0.0f}, {0.0f, -2300.0f}}, 3);
   }else if(task_step<=9){
     auto_mode_callback = Route::ParaRoute(2600.0f, 0.0f);
   }else{
@@ -107,7 +106,15 @@ void taskCallback() {
   }
   if(mode == Mode::Manual) {
     // モード受付
-    if (PS4.L2()) { // L2回転
+    if (l1) {
+      float dtheta = Params::l1r1_rot_angle;
+      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
+      auto_mode_callback = Route::RotAdjustRoute();
+    } else if (r1) {
+      float dtheta = -Params::l1r1_rot_angle;
+      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
+      auto_mode_callback = Route::RotAdjustRoute();
+    } else if (PS4.L2()) { // L2回転
       auto_mode_callback = Route::RotRoute(Params::AUTO_CONTROL_ROT_ANGLE);
     } else if (PS4.R2()) { // R2回転
       auto_mode_callback = Route::RotRoute(-Params::AUTO_CONTROL_ROT_ANGLE);
@@ -162,16 +169,6 @@ void taskCallback() {
   v_dest = Vec2<float>(0.0f, 0.0f);
   omega_dest = 0.0f;
   if(mode == Mode::Manual) {
-    // L1 R1による角度微調整
-    if (l1) {
-      float dtheta = -Params::l1r1_rot_angle;
-      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-    }
-    if (r1) {
-      float dtheta = Params::l1r1_rot_angle;
-      robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() + dtheta);
-    }
-
     // スティック入力
     v_dest = Params::MANUAL_MAX_PARA_VEL * readStick();
 
