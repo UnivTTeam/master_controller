@@ -25,7 +25,7 @@ inline constexpr float imu_calibration_start_time_sec = 3.0f;
 
 inline constexpr float MANUAL_MAX_PARA_VEL = 500.0f;
 
-inline constexpr float AUTO_CONTROL_PARA_VEL = 1500.0f;
+inline constexpr float AUTO_CONTROL_PARA_VEL = 1600.0f;
 inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;
 
 inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;

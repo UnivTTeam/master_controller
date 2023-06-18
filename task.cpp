@@ -258,6 +258,7 @@ void setAutoGTGT(){
 
 void taskCallback() {
   current_time = micros() / (1000.0f * 1000.0f);
+  linear::Vec2<float> last_v_dest = v_dest;
   v_dest = Vec2<float>(0.0f, 0.0f);
   omega_dest = 0.0f;
 
@@ -351,6 +352,14 @@ void taskCallback() {
 
     // スティック入力
     v_dest = Params::MANUAL_MAX_PARA_VEL * readStick();
+
+    // 加速度制限
+    linear::Vec2<float> acc = (v_dest - last_v_dest) / Params::control_interval_sec;
+    if(acc.norm() > Params::AUTO_CONTROL_PARA_ACC){
+      acc = (Params::AUTO_CONTROL_PARA_ACC / acc.norm()) * acc;
+      v_dest = last_v_dest + acc * Params::control_interval_sec;
+    }
+
     setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
   } else if (mode == Mode::Auto){
     if(auto_mode_callback()){
