@@ -65,17 +65,17 @@ void autoTask()
 {
   using Elevator::setElevator;
   if(task_step==0){
-    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}, {-900.0f, 1550.0f}}, 0, 0.0f);
+    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}, {-800.0f, 0.0f}}, 0, 0.0f);
   }else if(task_step<=2){
-    auto_mode_callback = Route::ParaRoute(-2600.0f, 0.0f);
+    auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
   }else if(task_step==3){
-    auto_mode_callback = Route::GeneralRoute({{-700.0f, 0.0f}, {M_PI}, {0.0f, 4600.0f}}, 2);
+    auto_mode_callback = Route::GeneralRoute({{-700.0f, 0.0f}, {M_PI}, {0.0f, 4600.0f}, {500.0f, 0.0f}}, 2);
   }else if(task_step<=5){
-    auto_mode_callback = Route::ParaRoute(2600.0f, 0.0f);
+    auto_mode_callback = Route::ParaRoute(2400.0f, 0.0f);
   }else if(task_step==6){
-    auto_mode_callback = Route::GeneralRoute({{600.0f, 0.0f}, {-M_PI}, {700.0f, 0.0f}, {0.0f, -2300.0f}}, 3);
+    auto_mode_callback = Route::GeneralRoute({{700.0f, 0.0f}, {-M_PI}, {600.0f, 0.0f}, {0.0f, -2100.0f}}, 3);
   }else if(task_step<=9){
-    auto_mode_callback = Route::ParaRoute(-2600.0f, 0.0f);
+    auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
   }else{
     auto_mode_callback = Route::GTGTRoute();
   }
