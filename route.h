@@ -14,11 +14,11 @@ using linear::Vec2, linear::Rot2;
 // 直接呼ぶことはない
 struct BangBang {
   BangBang(){}
-  BangBang(float X_, float V_, float A_);
+  BangBang(float X_, float V_, float A_, float time_mergin_=0.0f);
 
   void setT(float t_);
   float getT(float x) const;
-  bool isEnd() { return t >= Ttotal; }
+  bool isEnd() { return t >= Ttotal + time_mergin; }
   bool isNearEnd() { return t >= Ttotal - Tacc; }
 
   float getX() { return x; }
@@ -28,12 +28,13 @@ private:
   float x, v, t;
   float X, V, A;
   float Xacc, Vmax, Tacc, Tvel, Ttotal;
+  float time_mergin;
 };
 
 // 回転経路，与えられた角度だけ回転する
 struct RotRoute{
   RotRoute(){}
-  RotRoute(float theta);
+  RotRoute(float theta, float time_mergin = 0.0f);
 
   bool isEnd() { return bangbang.isEnd(); }
   bool operator()();
@@ -60,7 +61,7 @@ private:
 // 並進経路
 struct ParaRoute{
   ParaRoute(){}
-  ParaRoute(float x, float y);
+  ParaRoute(float x, float y, float time_mergin = 0.0f);
 
   bool isEnd() { return bangbang.isEnd(); }
   float getX() { return bangbang.getX(); }
@@ -84,7 +85,8 @@ struct GeneralRoute {
   GeneralRoute(
     const std::vector<std::vector<float>>& data_,
     int elevator_step_=-1,  // デフォルトは上昇機構なし
-    float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF);
+    float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF,
+    float time_mergin_=0.1);
 
   bool setNewRoute();
   bool operator()();
@@ -92,6 +94,7 @@ struct GeneralRoute {
 private:
   int step;
   int elevator_step;
+  float time_mergin;
   
   std::vector<std::vector<float>> data;
   float elevator_move_length;

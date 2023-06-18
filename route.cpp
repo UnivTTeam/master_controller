@@ -9,9 +9,9 @@ namespace Route {
 using linear::Vec2, linear::Rot2;
 
 // BangBang
-BangBang::BangBang(float X_, float V_, float A_)
+BangBang::BangBang(float X_, float V_, float A_, float time_mergin_)
 {
-  X = X_; V = V_; A = A_;
+  X = X_; V = V_; A = A_; time_mergin = time_mergin_;
   x = 0.0f; v = 0.0f; t = 0.0f;
 
   Xacc = V * V / A;
@@ -66,7 +66,7 @@ float BangBang::getT(float x) const
 }
 
 // RotRoute
-RotRoute::RotRoute(float theta)
+RotRoute::RotRoute(float theta, float time_mergin)
 {
   t0 = Params::current_time;
   theta0 = Task::theta_dest;
@@ -79,7 +79,8 @@ RotRoute::RotRoute(float theta)
   bangbang = BangBang(
     theta * dir,
     Params::AUTO_CONTROL_ROT_VEL,
-    Params::AUTO_CONTROL_ROT_ACC
+    Params::AUTO_CONTROL_ROT_ACC,
+    time_mergin
   );
 
   Task::setAutoMode();
@@ -104,7 +105,7 @@ bool RotAdjustRoute::operator()() {
 }
 
 // ParaRoute
-ParaRoute::ParaRoute(float x, float y){
+ParaRoute::ParaRoute(float x, float y, float time_mergin){
   near_end = false;
   t0 = Params::current_time;
   r0 = robot_pos.static_frame.pos;
@@ -115,7 +116,8 @@ ParaRoute::ParaRoute(float x, float y){
   bangbang = BangBang(
     dr * ex,
     Params::AUTO_CONTROL_PARA_VEL,
-    Params::AUTO_CONTROL_PARA_ACC
+    Params::AUTO_CONTROL_PARA_ACC,
+    time_mergin
   );
 
   Task::setAutoMode();
@@ -153,10 +155,12 @@ bool ParaRoute::operator()(){
 GeneralRoute::GeneralRoute(
     const std::vector<std::vector<float>>& data_,
     int elevator_step_,
-    float elevator_move_length_)
+    float elevator_move_length_,
+    float time_mergin_)
 {
   data = data_;
   elevator_move_length = elevator_move_length_;
+  time_mergin = time_mergin_;
 
   step = -1;
   elevator_step = elevator_step_;
@@ -179,11 +183,11 @@ bool GeneralRoute::setNewRoute()
     std::vector<float> info = data[step];
     if(info.size() == 2){
       is_para_route = true;
-      para = ParaRoute(info[0], info[1]);
+      para = ParaRoute(info[0], info[1], time_mergin);
       return true;
     } else if(info.size() == 1){
       is_para_route = false;
-      rot = RotRoute(info[0]);
+      rot = RotRoute(info[0], time_mergin);
       return true;
     }
     step++;
@@ -241,9 +245,9 @@ bool GTGTRoute::operator()(){
     if(step==0){
       para = ParaRoute(2000.0f, 0.0f);
     }else if(step%2 == 1){
-      para = ParaRoute(-1000.0f, 0.0f);
+      para = ParaRoute(-500.0f, 0.0f);
     }else{
-      para = ParaRoute(1000.0f, 0.0f);
+      para = ParaRoute(500.0f, 0.0f);
     }
   }
 
