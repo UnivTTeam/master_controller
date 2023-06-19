@@ -68,6 +68,7 @@ float BangBang::getT(float x) const
 // RotRoute
 RotRoute::RotRoute(float theta, float time_mergin)
 {
+  near_end = false;
   t0 = Params::current_time;
   theta0 = Task::theta_dest;
 
@@ -86,8 +87,27 @@ RotRoute::RotRoute(float theta, float time_mergin)
   Task::setAutoMode();
 }
 
+bool RotRoute::isEnd()
+{
+  return bangbang.isEnd() && (abs(robot_pos.dynamic_frame[0].rot) < Params::AUTO_CONTROL_PARA_STOP_VEL);
+}
+
 bool RotRoute::operator()() {
-  bangbang.setT(Params::current_time - t0);
+  float theta = (robot_pos.static_frame.rot.getAngle() - theta0) * dir;
+  float t = max(bangbang.getT(theta), 0.1f);
+
+  if(!near_end){
+    bangbang.setT(t);
+    if(bangbang.isNearEnd()){
+      near_end = true;
+      t0 = Params::current_time - t;
+    }
+  }
+  if(near_end){
+    t = Params::current_time - t0;
+  }
+
+  bangbang.setT(t);
   Task::theta_dest = theta0 + dir * bangbang.getX();
   Task::omega_dest = dir * bangbang.getV();
   return bangbang.isEnd();
@@ -121,6 +141,11 @@ ParaRoute::ParaRoute(float x, float y, float time_mergin){
   );
 
   Task::setAutoMode();
+}
+
+bool ParaRoute::isEnd()
+{
+  return bangbang.isEnd() && (robot_pos.dynamic_frame[0].pos.norm() < Params::AUTO_CONTROL_PARA_STOP_VEL);
 }
 
 bool ParaRoute::operator()(){
@@ -169,6 +194,8 @@ GeneralRoute::GeneralRoute(
   }
 
   setNewRoute();
+
+  Task::setAutoMode();
 }
 
 bool GeneralRoute::setNewRoute()

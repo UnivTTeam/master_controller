@@ -85,9 +85,9 @@ void autoTask()
 void taskCallback() {
   // ボタン読み込み
   bool up = up_wrapper(PS4.Up());
-  bool left = up_wrapper(PS4.Left());
-  bool right = up_wrapper(PS4.Right());
-  bool down = up_wrapper(PS4.Down());
+  bool left = left_wrapper(PS4.Left());
+  bool right = right_wrapper(PS4.Right());
+  bool down = down_wrapper(PS4.Down());
   bool l1 = l1_wrapper(PS4.L1());
   bool r1 = r1_wrapper(PS4.R1());
 
@@ -123,12 +123,14 @@ void taskCallback() {
     } else if (PS4.Circle()) {
       autoTask();
     } else if (PS4.Square()){
+      /*
       auto_mode_callback = Route::GeneralRoute({
         {1000.0f, 0.0f}, {0.5f * M_PI}, 
         {0.0f, 1000.0f}, {0.5f * M_PI}, 
         {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
         {0.0f, -1000.0f}, {-0.5f * M_PI}});
-      // setAutoPara(1760.0f, 1760.0f);
+      */
+      auto_mode_callback = Route::ParaRoute(1000.0f, 0.0f);
     }
   }
   // 子機にモードを送信
@@ -152,17 +154,20 @@ void taskCallback() {
   // 熊手処理
   if(mode == Mode::Manual || mode == Mode::Auto){
     using namespace Elevator;
-    if(right){
-      resetElevator();
+    bool is_end = elevatorCallback();
+
+    if(down){
+      retryElevator();
     }
     if(left){
       resetElevator();
       elevator_step--;
     }
-    bool is_end = elevatorCallback();
-
+    if(right){
+      resetElevator();
+      elevator_step++;
+    }
     if(is_end & up){
-      Serial.printf("熊手上昇指令 %d\n", elevator_step);
       setElevator();
     }
   } else if(mode == Mode::Emergency){
@@ -183,13 +188,12 @@ void taskCallback() {
       acc = (Params::AUTO_CONTROL_PARA_ACC / acc.norm()) * acc;
       v_dest = last_v_dest + acc * Params::control_interval_sec;
     }
-
-    setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+    setVelocityFromField();
   } else if (mode == Mode::Auto){
     if(auto_mode_callback()){
       mode = Mode::Manual;
     }
-    setVelocityFromField(v_dest.x, v_dest.y, theta_dest);
+    setVelocityFromField();
   } else if(mode == Mode::Emergency){
     CommandValue::wheel_vx = 0.0f;
     CommandValue::wheel_vy = 0.0f;

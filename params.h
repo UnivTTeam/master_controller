@@ -36,13 +36,16 @@ inline constexpr float AUTO_CONTROL_ROT_ACC = 2.0f * M_PI;  // a=2000 <--> alpha
 inline constexpr float rotKp = 5.0f;
 inline constexpr float paraKp = 5.0f;
 
+inline constexpr float AUTO_CONTROL_PARA_STOP_VEL = 50.0f;
+inline constexpr float AUTO_CONTROL_ROT_STOP_VEL = 0.1f;
+
 // ジャイロの生の値を角度に変更する定数 [rad / rawZ]
 inline constexpr float gyro_scale = 4.05f; // [4.048290243592277, 4.0505555454999325, 4.052528003206573, 4.035715515291389]
 inline constexpr float optical_flow_scale = 42.2f; // 90.05186170389779f;
 
 // ニクロム線のピン番号
 inline const std::vector<std::vector<int>> ELEVATOR_PINS = {{{13,25},{14},{27},{26}}};
-inline constexpr float ELEVATOR_TIME = 2.5f;
+inline constexpr float ELEVATOR_TIME = 4.0;
 inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED

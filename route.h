@@ -36,10 +36,11 @@ struct RotRoute{
   RotRoute(){}
   RotRoute(float theta, float time_mergin = 0.0f);
 
-  bool isEnd() { return bangbang.isEnd(); }
+  bool isEnd();
   bool operator()();
 
 private:
+  bool near_end;
   float t0, theta0;
 
   BangBang bangbang;
@@ -57,13 +58,12 @@ private:
   RotRoute route;
 };
 
-
 // 並進経路
 struct ParaRoute{
   ParaRoute(){}
   ParaRoute(float x, float y, float time_mergin = 0.0f);
 
-  bool isEnd() { return bangbang.isEnd(); }
+  bool isEnd();
   float getX() { return bangbang.getX(); }
   bool operator()();
 
@@ -86,7 +86,7 @@ struct GeneralRoute {
     const std::vector<std::vector<float>>& data_,
     int elevator_step_=-1,  // デフォルトは上昇機構なし
     float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF,
-    float time_mergin_=0.1);
+    float time_mergin_=0.0f);
 
   bool setNewRoute();
   bool operator()();

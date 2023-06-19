@@ -6,9 +6,9 @@ namespace Elevator{
 
 using Params::current_time;
 
-int target_pin = elevator_step;
+int target_pin = 0;
 float end_time = -1.0f;
-extern volatile int elevator_step = 0;
+volatile int elevator_step = 0;
 
 bool elevatorCallback()
 {
@@ -38,7 +38,12 @@ void setElevator()
 
 void resetElevator()
 {
-  end_time = 0.0f;
+  end_time = -1.0f;
+}
+
+void retryElevator()
+{
+  end_time = current_time + Params::ELEVATOR_TIME;
 }
 
 void stopElevator()
