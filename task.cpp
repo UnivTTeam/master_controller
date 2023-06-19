@@ -30,6 +30,8 @@ SwitchUpperTrigger left_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger right_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger down_wrapper = SwitchUpperTrigger();
 
+SwitchUpperTrigger circle_wrapper = SwitchUpperTrigger();
+
 SwitchUpperTrigger l1_wrapper = SwitchUpperTrigger();
 SwitchUpperTrigger r1_wrapper = SwitchUpperTrigger();
 
@@ -51,6 +53,7 @@ Vec2<float> readStick() {
   );
 }
 bool interruptAutoMode() {
+  return false;
   return (readStick().norm() != 0.0f);
 }
 
@@ -64,19 +67,36 @@ int task_step = 0;
 void autoTask()
 {
   using Elevator::setElevator;
+  /*
   if(task_step==0){
-    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}, {-800.0f, 0.0f}}, 0, 0.0f);
+    auto_mode_callback = Route::GeneralRoute({{-800.0f, 1550.0f}}, 0, 0.0f);
   }else if(task_step<=2){
     auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
   }else if(task_step==3){
-    auto_mode_callback = Route::GeneralRoute({{-700.0f, 0.0f}, {M_PI}, {0.0f, 4600.0f}, {500.0f, 0.0f}}, 2);
+    auto_mode_callback = Route::GeneralRoute({{-700.0f, 0.0f}, {-M_PI}, {0.0f, 4600.0f}, {500.0f, 0.0f}}, 2);
   }else if(task_step<=5){
     auto_mode_callback = Route::ParaRoute(2400.0f, 0.0f);
   }else if(task_step==6){
-    auto_mode_callback = Route::GeneralRoute({{700.0f, 0.0f}, {-M_PI}, {600.0f, -2100.0f}}, 2);
+    auto_mode_callback = Route::GeneralRoute({{700.0f, 0.0f}, {M_PI}, {0.0f, -2100.0f}}, 2);
   }else if(task_step<=9){
     auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
   }else{
+    auto_mode_callback = Route::GTGTRoute();
+  }
+  */
+  if(task_step==0){
+    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}}, 0, 0.0f);
+  }else if(task_step==1){
+    auto_mode_callback = Route::ParaRoute(90000.0f, 0.0f);
+  }else if(task_step==2){
+    auto_mode_callback = Route::GeneralRoute({{-M_PI}, {0.0f, 4600.0f}}, 1);
+  }else if(task_step==3){
+    auto_mode_callback = Route::ParaRoute(90000.0f, 0.0f);
+  }else if(task_step==4){
+    auto_mode_callback = Route::GeneralRoute({{M_PI}, {0.0f, -1800.0f}}, 1);
+  }else if(task_step==5){
+    auto_mode_callback = Route::ParaRoute(-90000.0f, 0.0f);
+  }else if(task_step==5){
     auto_mode_callback = Route::GTGTRoute();
   }
   task_step++;
@@ -90,6 +110,7 @@ void taskCallback() {
   bool down = down_wrapper(PS4.Down());
   bool l1 = l1_wrapper(PS4.L1());
   bool r1 = r1_wrapper(PS4.R1());
+  bool circle = circle_wrapper(PS4.Circle());
 
   // モード読み込み
   if(mode != Mode::MapParam){
@@ -120,14 +141,17 @@ void taskCallback() {
       auto_mode_callback = Route::RotRoute(-Params::AUTO_CONTROL_ROT_ANGLE);
     } else if (PS4.Triangle()) {
       auto_mode_callback = Route::GTGTRoute();
-    } else if (PS4.Circle()) {
-      autoTask();
     } else if (PS4.Square()){
       auto_mode_callback = Route::GeneralRoute({
         {1000.0f, 0.0f}, {0.5f * M_PI}, 
         {0.0f, 1000.0f}, {0.5f * M_PI}, 
         {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
         {0.0f, -1000.0f}, {-0.5f * M_PI}});
+    }
+  }
+  if(mode == Mode::Manual || mode == Mode::Auto){
+    if(circle){
+      autoTask();
     }
   }
   // 子機にモードを送信
@@ -187,6 +211,8 @@ void taskCallback() {
     }
     setVelocityFromField();
   } else if (mode == Mode::Auto){
+    auto r_diff = Params::AUTO_MODE_MANUAL_POS_CHANGE * readStick();
+    Route::addRdiff(r_diff);
     if(auto_mode_callback()){
       mode = Mode::Manual;
     }
@@ -199,13 +225,13 @@ void taskCallback() {
 
   // ログ
   if(mode != Mode::MapParam){
-    // Serial.printf("t: %f dest: %f %f %f ",
-    //   current_time, 
-    //   v_dest.x, v_dest.y, theta_dest);
-    // Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
-    //   robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-    //   robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-    // );
+    Serial.printf("t: %f dest: %f %f %f ",
+      current_time, 
+      v_dest.x, v_dest.y, theta_dest);
+    Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
+      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+    );
   } else { // MapParam
     Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
       current_time, Params::control_interval_sec, 

@@ -92,6 +92,9 @@ struct GeneralRoute {
   bool operator()();
 
 private:
+  void callRoute();
+  bool routeIsEnd();
+
   int step;
   int elevator_step;
   float time_mergin;
@@ -118,5 +121,6 @@ private:
   ParaRoute para;  
 };
 
+void addRdiff(const Vec2<float>& x);
 
 } // namespace Route

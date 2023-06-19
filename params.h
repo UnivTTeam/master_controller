@@ -13,7 +13,7 @@ inline float control_interval_sec = CONTROL_INTERVAL_MS / 1000.f;
 inline float current_time = 0.0f;
 
 // フィールド上の初期位置情報(x, y, theta)
-inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, 0.0f * M_PI);
+inline const Transform::StaticTransform<float> init_pos(0.0f, 0.0f, M_PI);
 
 // マシン座標上のオプティカルフロー位置(x, y, theta)
 inline const Transform::StaticTransform<float> optical_flow_pos(-60.0f, 250.0f, 0.039716020318083745f);
@@ -24,23 +24,18 @@ inline constexpr float l1r1_rot_angle = (3.0f/180.0f) * M_PI;
 inline constexpr float imu_calibration_time_sec = 5.0f;
 inline constexpr float imu_calibration_start_time_sec = 3.0f;
 
-inline constexpr float MANUAL_MAX_PARA_VEL = 500.0f;
+inline constexpr float MANUAL_MAX_PARA_VEL = 800.0f;
 
-/*
-inline constexpr float AUTO_CONTROL_PARA_VEL = 1600.0f;
-inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;
-
-inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
-inline constexpr float AUTO_CONTROL_ROT_VEL = 2.5f * M_PI;  // v=1500 <--> omega=3.5
-inline constexpr float AUTO_CONTROL_ROT_ACC = 2.0f * M_PI;  // a=2000 <--> alpha=2.0
-*/
-
-inline constexpr float AUTO_CONTROL_PARA_VEL = 1000.0f;
-inline constexpr float AUTO_CONTROL_PARA_ACC = 1000.0f;
+inline constexpr float AUTO_CONTROL_PARA_VEL = 2000.0f;
+inline constexpr float AUTO_CONTROL_PARA_ACC = 2500.0f;
 
 inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
-inline constexpr float AUTO_CONTROL_ROT_VEL = 1.0f * M_PI;  // v=1500 <--> omega=3.5
-inline constexpr float AUTO_CONTROL_ROT_ACC = 1.0f * M_PI;  // a=2000 <--> alpha=2.0
+inline constexpr float AUTO_CONTROL_ROT_VEL = 2.0f * M_PI;  // v=1500 <--> omega=3.5
+inline constexpr float AUTO_CONTROL_ROT_ACC = 1.5f * M_PI;  // a=2000 <--> alpha=2.0
+
+inline constexpr float AUTO_MODE_MANUAL_POS_CHANGE = 300.0f / 0.5f;
+
+inline constexpr float MAX_ROT_VEL = 3.0f * M_PI;
 
 inline constexpr float rotKp = 5.0f;
 inline constexpr float paraKp = 5.0f;

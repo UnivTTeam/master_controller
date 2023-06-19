@@ -8,6 +8,10 @@ namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
+constexpr float minimum_route_time = 0.5f;
+
+Vec2<float> r_diff(0.0f, 0.0f);
+
 // BangBang
 BangBang::BangBang(float X_, float V_, float A_, float time_mergin_)
 {
@@ -94,7 +98,7 @@ bool RotRoute::isEnd()
 
 bool RotRoute::operator()() {
   float theta = (robot_pos.static_frame.rot.getAngle() - theta0) * dir;
-  float t = max(bangbang.getT(theta), 0.1f);
+  float t = max(bangbang.getT(theta), minimum_route_time);
   Serial.printf("RotRoute\n");
 
   if(!near_end){
@@ -132,6 +136,8 @@ ParaRoute::ParaRoute(float x, float y, float time_mergin){
   t0 = Params::current_time;
   r0 = robot_pos.static_frame.pos;
 
+  r_diff = Vec2<float>(0.0f, 0.0f);
+
   dr = linear::Vec2<float>(x, y);
   ex = (1.0f / dr.norm()) * dr;
   ey = linear::Vec2<float>(-ex.y, ex.x);
@@ -151,10 +157,10 @@ bool ParaRoute::isEnd()
 }
 
 bool ParaRoute::operator()(){
-  linear::Vec2<float> r = robot_pos.static_frame.pos - r0;
+  linear::Vec2<float> r = robot_pos.static_frame.pos - (r0+r_diff);
   float x = r * ex;
   float y = r * ey;
-  float t = max(bangbang.getT(x), 0.1f);
+  float t = max(bangbang.getT(x), minimum_route_time);
 
   if(!near_end){
     bangbang.setT(t);
@@ -176,6 +182,11 @@ bool ParaRoute::operator()(){
   Task::v_dest = (vx*ex) + (vy*ey);
 
   return Task::interruptAutoMode();
+}
+
+void addRdiff(const Vec2<float>& x)
+{
+  r_diff = r_diff + x;
 }
 
 // GeneralRoute
@@ -234,19 +245,31 @@ bool GeneralRoute::setNewRoute()
   return false;
 }
 
+void GeneralRoute::callRoute()
+{
+  if(is_para_route){
+    para();
+  }else{
+    rot();
+  }
+}
+
+bool GeneralRoute::routeIsEnd()
+{
+  if(is_para_route){
+    return para.isEnd();
+  }else{
+    return rot.isEnd();
+  }  
+}
+
 bool GeneralRoute::operator()(){
   bool is_end = true;
   while(is_end){
-    if(is_para_route){
-      para();
-      is_end = para.isEnd();
-    }else{
-      rot();
-      is_end = rot.isEnd();
-    }
+    callRoute();
+    is_end = routeIsEnd();
     if(is_end){
       // 新ルートの取得に失敗したらis_endにfalseが入る
-      Serial.printf("Route end %d\n", step);
       is_end = setNewRoute();
     }
   }
@@ -265,7 +288,7 @@ bool GeneralRoute::operator()(){
   if(step == max_step -1 && is_para_route){
     return Task::interruptAutoMode();
   } else if(step == data.size()){
-    return Task::interruptAutoMode();
+    return true;
   }
   return false;
 }
@@ -283,11 +306,17 @@ bool GTGTRoute::operator()(){
   if(para.isEnd()){
     step++;
     if(step==0){
+      para = ParaRoute(0.0f, 700.0f);
+    }else if(step == 1){
       para = ParaRoute(2000.0f, 0.0f);
-    }else if(step%2 == 1){
-      para = ParaRoute(-500.0f, 0.0f);
-    }else{
+    }else if(step%4 == 2){
+      para = ParaRoute(0.0f, 500.0f);
+    }else if(step%4 == 3){
+      para = ParaRoute(0.0f, -500.0f);
+    }else if(step%4 == 0){
       para = ParaRoute(500.0f, 0.0f);
+    }else{
+      para = ParaRoute(-500.0f, 0.0f);
     }
   }
 

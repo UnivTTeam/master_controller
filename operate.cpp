@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "map.h"
 #include "device.h"
 #include "params.h"
@@ -23,6 +25,11 @@ void setVelocityFromField()
   // thetaのP制御
   float dtheta = std::remainder(robot_pos.static_frame.rot.getAngle() - theta0, 2 * M_PI);
   float omega0 = -Params::rotKp * dtheta + omega_ff;
+  if(omega0 > Params::MAX_ROT_VEL){
+    omega0 = Params::MAX_ROT_VEL;
+  }else if(omega0 < -Params::MAX_ROT_VEL){
+    omega0 = -Params::MAX_ROT_VEL;
+  }
 
   // マシン座標的目標速度の取得
   Transform::MultidiffTransform<float, 1> robot_dest(
