@@ -83,7 +83,7 @@ private:
 // また，移動開始直後に上げると干渉する場合があるので，elevator_move_length だけ移動してから上げる
 struct GeneralRoute {
   GeneralRoute(
-    const std::vector<std::vector<float>>& data_,
+    std::vector<std::vector<float>> data_,
     int elevator_step_=-1,  // デフォルトは上昇機構なし
     float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF,
     float time_mergin_=0.0f);
@@ -95,7 +95,8 @@ private:
   int step;
   int elevator_step;
   float time_mergin;
-  
+  int max_step;
+
   std::vector<std::vector<float>> data;
   float elevator_move_length;
 

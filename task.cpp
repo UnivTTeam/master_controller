@@ -123,14 +123,11 @@ void taskCallback() {
     } else if (PS4.Circle()) {
       autoTask();
     } else if (PS4.Square()){
-      /*
       auto_mode_callback = Route::GeneralRoute({
         {1000.0f, 0.0f}, {0.5f * M_PI}, 
         {0.0f, 1000.0f}, {0.5f * M_PI}, 
         {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
         {0.0f, -1000.0f}, {-0.5f * M_PI}});
-      */
-      auto_mode_callback = Route::ParaRoute(1000.0f, 0.0f);
     }
   }
   // 子機にモードを送信
@@ -202,13 +199,13 @@ void taskCallback() {
 
   // ログ
   if(mode != Mode::MapParam){
-    Serial.printf("t: %f dest: %f %f %f ",
-      current_time, 
-      v_dest.x, v_dest.y, theta_dest);
-    Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
-      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-    );
+    // Serial.printf("t: %f dest: %f %f %f ",
+    //   current_time, 
+    //   v_dest.x, v_dest.y, theta_dest);
+    // Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
+    //   robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+    //   robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+    // );
   } else { // MapParam
     Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
       current_time, Params::control_interval_sec, 

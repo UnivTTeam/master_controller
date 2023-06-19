@@ -89,12 +89,13 @@ RotRoute::RotRoute(float theta, float time_mergin)
 
 bool RotRoute::isEnd()
 {
-  return bangbang.isEnd() && (abs(robot_pos.dynamic_frame[0].rot) < Params::AUTO_CONTROL_PARA_STOP_VEL);
+  return (bangbang.isEnd() & (abs(robot_pos.dynamic_frame[0].rot) < Params::AUTO_CONTROL_PARA_STOP_VEL));
 }
 
 bool RotRoute::operator()() {
   float theta = (robot_pos.static_frame.rot.getAngle() - theta0) * dir;
   float t = max(bangbang.getT(theta), 0.1f);
+  Serial.printf("RotRoute\n");
 
   if(!near_end){
     bangbang.setT(t);
@@ -126,6 +127,7 @@ bool RotAdjustRoute::operator()() {
 
 // ParaRoute
 ParaRoute::ParaRoute(float x, float y, float time_mergin){
+  Serial.printf("ParaRoute\n");
   near_end = false;
   t0 = Params::current_time;
   r0 = robot_pos.static_frame.pos;
@@ -145,7 +147,7 @@ ParaRoute::ParaRoute(float x, float y, float time_mergin){
 
 bool ParaRoute::isEnd()
 {
-  return bangbang.isEnd() && (robot_pos.dynamic_frame[0].pos.norm() < Params::AUTO_CONTROL_PARA_STOP_VEL);
+  return (bangbang.isEnd() & (robot_pos.dynamic_frame[0].pos.norm() < Params::AUTO_CONTROL_PARA_STOP_VEL));
 }
 
 bool ParaRoute::operator()(){
@@ -178,14 +180,16 @@ bool ParaRoute::operator()(){
 
 // GeneralRoute
 GeneralRoute::GeneralRoute(
-    const std::vector<std::vector<float>>& data_,
+    std::vector<std::vector<float>> data_,
     int elevator_step_,
     float elevator_move_length_,
     float time_mergin_)
 {
+  Serial.printf("GeneralRoute\n");
   data = data_;
   elevator_move_length = elevator_move_length_;
   time_mergin = time_mergin_;
+  max_step = data_.size();
 
   step = -1;
   elevator_step = elevator_step_;
@@ -200,14 +204,20 @@ GeneralRoute::GeneralRoute(
 
 bool GeneralRoute::setNewRoute()
 {
-  if(step >= data.size()){
+  if(step >= max_step){
     step = data.size();
     return false;
   }
+  Serial.printf("setNewRoute %d\n", step);
 
   step++;
-  while(step < data.size()){
+  Serial.printf("hoge %d\n", step);
+  for(const auto& v: data){
+    Serial.printf(" v.size()=%d\n", v.size());
+  }
+  while(step < max_step){
     std::vector<float> info = data[step];
+    Serial.printf("info.size()=%d\n", info.size());
     if(info.size() == 2){
       is_para_route = true;
       para = ParaRoute(info[0], info[1], time_mergin);
@@ -216,6 +226,8 @@ bool GeneralRoute::setNewRoute()
       is_para_route = false;
       rot = RotRoute(info[0], time_mergin);
       return true;
+    } else {
+      Serial.printf("invalid route\n");
     }
     step++;
   }
@@ -234,6 +246,7 @@ bool GeneralRoute::operator()(){
     }
     if(is_end){
       // 新ルートの取得に失敗したらis_endにfalseが入る
+      Serial.printf("Route end %d\n", step);
       is_end = setNewRoute();
     }
   }
@@ -249,7 +262,7 @@ bool GeneralRoute::operator()(){
     }
   }
 
-  if(step == data.size() -1 && is_para_route){
+  if(step == max_step -1 && is_para_route){
     return Task::interruptAutoMode();
   } else if(step == data.size()){
     return Task::interruptAutoMode();

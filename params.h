@@ -26,12 +26,21 @@ inline constexpr float imu_calibration_start_time_sec = 3.0f;
 
 inline constexpr float MANUAL_MAX_PARA_VEL = 500.0f;
 
+/*
 inline constexpr float AUTO_CONTROL_PARA_VEL = 1600.0f;
 inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;
 
 inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
 inline constexpr float AUTO_CONTROL_ROT_VEL = 2.5f * M_PI;  // v=1500 <--> omega=3.5
 inline constexpr float AUTO_CONTROL_ROT_ACC = 2.0f * M_PI;  // a=2000 <--> alpha=2.0
+*/
+
+inline constexpr float AUTO_CONTROL_PARA_VEL = 1000.0f;
+inline constexpr float AUTO_CONTROL_PARA_ACC = 1000.0f;
+
+inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
+inline constexpr float AUTO_CONTROL_ROT_VEL = 1.0f * M_PI;  // v=1500 <--> omega=3.5
+inline constexpr float AUTO_CONTROL_ROT_ACC = 1.0f * M_PI;  // a=2000 <--> alpha=2.0
 
 inline constexpr float rotKp = 5.0f;
 inline constexpr float paraKp = 5.0f;
