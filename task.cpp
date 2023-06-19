@@ -63,6 +63,12 @@ void setAutoMode()
   mode = Mode::Auto;
 }
 
+bool force_emergency = false;
+void callForceEmergency()
+{
+  force_emergency = true;
+}
+
 int task_step = 0;
 void autoTask()
 {
@@ -124,6 +130,9 @@ void taskCallback() {
         mode = Mode::Manual;
       }
     }
+  }
+  if(force_emergency){
+    mode = Mode::Emergency;
   }
   if(mode == Mode::Manual) {
     // モード受付

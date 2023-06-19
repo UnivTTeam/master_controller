@@ -295,30 +295,57 @@ bool GeneralRoute::operator()(){
 
 // GTGTRoute
 GTGTRoute::GTGTRoute(){
-  step = -1;
-  para = ParaRoute(0.0f, -700.0f);
+  step = 0;
+  setNewRoute(0.0f, -700.0f);
 
   Task::setAutoMode();
 }
 
+void GTGTRoute::setNewRoute(float x, float y)
+{
+  auto r = Vec2<float>(x, y);
+
+  t0 = Params::current_time;
+  bangbang = BangBang(
+    r.norm(),
+    Params::AUTO_CONTROL_PARA_VEL,
+    Params::AUTO_CONTROL_PARA_ACC
+  );
+  e = (1.0f / r.norm()) * r;
+}
+
 bool GTGTRoute::operator()(){
-  para();
-  if(para.isEnd()){
-    step++;
-    if(step==0){
-      para = ParaRoute(0.0f, 700.0f);
-    }else if(step == 1){
-      para = ParaRoute(2000.0f, 0.0f);
-    }else if(step%4 == 2){
-      para = ParaRoute(0.0f, 500.0f);
-    }else if(step%4 == 3){
-      para = ParaRoute(0.0f, -500.0f);
-    }else if(step%4 == 0){
-      para = ParaRoute(500.0f, 0.0f);
+  float t = Params::current_time - t0;
+  bangbang.setT(t);
+  
+  if(bangbang.isEnd()){
+    if(step == 0){
+      setNewRoute(1000.0f, 0.0f);
+    }else if(step==1){
+      setNewRoute(0.0f, 600.0f);
+    }else if(step==2){
+      setNewRoute(-500.0f, 0.0f);
+    }else if(step==3){
+      setNewRoute(500.0f, 0.0f);
+    }else if(step==2){
+      setNewRoute(0.0f, -500.0f);
+    }else if(step==3){
+      setNewRoute(0.0f, 500.0f);
+    }else if(step==4){
+      setNewRoute(-500.0f, 0.0f);
+    }else if(step==5){
+      setNewRoute(500.0f, 0.0f);
+    }else if(step==6){
+      setNewRoute(0.0f, -500.0f);
+    }else if(step==7){
+      setNewRoute(0.0f, 500.0f);
     }else{
-      para = ParaRoute(-500.0f, 0.0f);
+      Task::callForceEmergency();
     }
+    step++;
+    bangbang.setT(0.0f);
   }
+  Task::v_dest = bangbang.getV() * e;
 
   return false;
 }

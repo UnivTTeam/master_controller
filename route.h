@@ -76,6 +76,7 @@ private:
   Vec2<float> dr, ex, ey;
 };
 
+
 // 一般経路
 // 回転経路，並進経路を順番に実施
 //   dataのところが2次元vectorなら並進，1次元vectorなら回転
@@ -115,10 +116,12 @@ struct GTGTRoute{
   bool operator()();
 
 private:
+  void setNewRoute(float x, float y);
+  
   int step;
-
-  RotRoute rot;
-  ParaRoute para;  
+  float t0;
+  BangBang bangbang;
+  Vec2<float> e;
 };
 
 void addRdiff(const Vec2<float>& x);
