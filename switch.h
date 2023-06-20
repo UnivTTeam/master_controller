@@ -1,5 +1,5 @@
 #pragma once
-#include <arduino.h>
+#include <Arduino.h>
 
 struct SwitchUpperTrigger {
   SwitchUpperTrigger() : last_state(true)

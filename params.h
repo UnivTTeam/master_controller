@@ -24,7 +24,7 @@ inline constexpr float l1r1_rot_angle = (3.0f/180.0f) * M_PI;
 inline constexpr float imu_calibration_time_sec = 5.0f;
 inline constexpr float imu_calibration_start_time_sec = 3.0f;
 
-inline constexpr float MANUAL_MAX_PARA_VEL = 800.0f;
+inline constexpr float MANUAL_MAX_PARA_VEL = 1600.0f;
 
 inline constexpr float AUTO_CONTROL_PARA_VEL = 2000.0f;
 inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;

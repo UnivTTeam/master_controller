@@ -47,15 +47,17 @@ float readStickRaw(int8_t x) {
   }
   return ratio;
 }
-Vec2<float> readStick() {
+Vec2<float> readLStick() {
   return Vec2<float>(
-    readStickRaw(PS4.RStickX()),
+    readStickRaw(PS4.LStickX()),
     readStickRaw(PS4.LStickY())
   );
 }
-bool interruptAutoMode() {
-  return false;
-  return (readStick().norm() != 0.0f);
+Vec2<float> readRStick() {
+  return Vec2<float>(
+    readStickRaw(PS4.RStickX()),
+    readStickRaw(PS4.RStickY())
+  );
 }
 
 std::function<bool()> auto_mode_callback = [](){ return true; };
@@ -75,12 +77,22 @@ void callForceEmergency()
   force_emergency = true;
 }
 
-int task_step = 0;
+int task_step = -1;
+bool auto_x_mode = true;
+int checkTaskStep(int i){
+  if(task_step == i-1){
+    return true;
+  }
+  if(task_step == i){
+    return true;
+  }
+  return false;
+}
 void autoTask()
 {
   using Elevator::setElevator;
   /*
-  if(task_step==0){
+  if(task_step==0 && PS4.Up()){
     auto_mode_callback = Route::GeneralRoute({{-800.0f, 1550.0f}}, 0, 0.0f);
   }else if(task_step<=2){
     auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
@@ -96,22 +108,52 @@ void autoTask()
     auto_mode_callback = Route::GTGTRoute();
   }
   */
-  if(task_step==0){
-    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}}, 0, 0.0f);
-  }else if(task_step==1){
+  if(checkTaskStep(0) && PS4.Up()){
+    if(task_step==-1){
+      robot_pos = Transform::MultidiffTransform<float, 1>(Params::init_pos);
+    }
+    static float y0 = robot_pos.static_frame.pos.y;
+    float ydiff = robot_pos.static_frame.pos.y - y0;
+    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f - ydiff}}, 0, 0.0f);
+    task_step = 0;
+    auto_x_mode = false;
+  }else if(checkTaskStep(1) && PS4.Left()){
     auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
-  }else if(task_step==2){
-    auto_mode_callback = Route::GeneralRoute({{-M_PI}, {0.0f, 4600.0f}}, 1);
-  }else if(task_step==3){
+    task_step = 1;
+    auto_x_mode = true;
+  }else if(checkTaskStep(2) && PS4.Up()){
+    float theta = 0.0f;
+    static float y0 = robot_pos.static_frame.pos.y;
+    float ydiff = robot_pos.static_frame.pos.y - y0;
+    float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, 4600.0f - ydiff}}, 1, y_kumade);
+    task_step = 2;
+    auto_x_mode = false;
+  }else if(checkTaskStep(3) && PS4.Right()){
     auto_mode_callback = Route::LinearRoute(900000.0f, 0.0f);
-  }else if(task_step==4){
-    auto_mode_callback = Route::GeneralRoute({{M_PI}, {0.0f, -1800.0f}}, 1);
-  }else if(task_step==5){
+    task_step = 3;
+    auto_x_mode = true;
+  }else if(checkTaskStep(4) && PS4.Down()){
+    float theta = M_PI;
+    static float y0 = robot_pos.static_frame.pos.y;
+    float ydiff = robot_pos.static_frame.pos.y - y0;
+    float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, -2300.0f - ydiff}}, 1, y_kumade);
+    task_step = 4;
+    auto_x_mode = false;
+  }else if(checkTaskStep(5) && PS4.Left()){
     auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
-  }else if(task_step==6){
+    task_step = 5;
+    auto_x_mode = true;
+  }else if(checkTaskStep(6) && PS4.Down()){
     auto_mode_callback = Route::GTGTRoute();
+    task_step = 6;
+    auto_x_mode = false;
   }
-  task_step++;
+}
+
+bool autoModeGoButton() {
+  return PS4.Up() | PS4.Left() | PS4.Down() | PS4.Right() | PS4.Square();
 }
 
 void taskCallback() {
@@ -145,16 +187,16 @@ void taskCallback() {
     if (l1) {
       float dtheta = Params::l1r1_rot_angle;
       robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
-      auto_mode_callback = Route::RotAdjustRoute();
+      //auto_mode_callback = Route::RotAdjustRoute();
     } else if (r1) {
       float dtheta = -Params::l1r1_rot_angle;
       robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
-      auto_mode_callback = Route::RotAdjustRoute();
+      //auto_mode_callback = Route::RotAdjustRoute();
     } else if (PS4.L2()) { // L2回転
       auto_mode_callback = Route::RotRoute(Params::AUTO_CONTROL_ROT_ANGLE);
     } else if (PS4.R2()) { // R2回転
       auto_mode_callback = Route::RotRoute(-Params::AUTO_CONTROL_ROT_ANGLE);
-    } else if (PS4.Triangle()) {
+    }/* else if (PS4.Triangle()) {
       auto_mode_callback = Route::GTGTRoute();
     } else if (PS4.Square()){
       auto_mode_callback = Route::GeneralRoute({
@@ -162,14 +204,14 @@ void taskCallback() {
         {0.0f, 1000.0f}, {0.5f * M_PI}, 
         {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
         {0.0f, -1000.0f}, {-0.5f * M_PI}});
-    }
+    }*/
   }
   if(mode == Mode::Manual){
-    if(circle){
+    if(autoModeGoButton()){
       autoTask();
     }
   }
-  if(mode == Mode::Auto && !(PS4.Circle()|PS4.Triangle())){
+  if(mode == Mode::Auto && !autoModeGoButton()){
     mode = Mode::Emergency;
   }
   // 子機にモードを送信
@@ -195,6 +237,7 @@ void taskCallback() {
     using namespace Elevator;
     bool is_end = elevatorCallback();
 
+    /*
     if(down){
       retryElevator();
     }
@@ -209,6 +252,7 @@ void taskCallback() {
     if(is_end & up){
       setElevator();
     }
+    */
   } else if(mode == Mode::Emergency){
     Elevator::stopElevator();
   }
@@ -219,7 +263,18 @@ void taskCallback() {
   omega_dest = 0.0f;
   if(mode == Mode::Manual) {
     // スティック入力
-    v_dest = Params::MANUAL_MAX_PARA_VEL * readStick();
+    auto l = readLStick();
+    auto r = readRStick();
+    if(l.norm() > 0.0f){
+      if(std::abs(l.x) > std::abs(l.y)){
+        l.y = 0;
+        r.x = 0;
+      }else{
+        l.x = 0;
+        r.y = 0;
+      }
+    }
+    v_dest = Params::MANUAL_MAX_PARA_VEL * l +  0.5f * Params::MANUAL_MAX_PARA_VEL * r;
 
     // 加速度制限
     linear::Vec2<float> acc = (v_dest - last_v_dest) / Params::control_interval_sec;
@@ -229,7 +284,12 @@ void taskCallback() {
     }
     setVelocityFromField();
   } else if (mode == Mode::Auto || mode == Mode::Rot){
-    auto r_diff = Params::control_interval_sec * Params::AUTO_MODE_MANUAL_POS_CHANGE * readStick();
+    auto r_diff = Params::control_interval_sec * Params::AUTO_MODE_MANUAL_POS_CHANGE * readRStick();
+    if(auto_x_mode){
+      r_diff.x = 0.0f;
+    }else{
+      r_diff.y = 0.0f;
+    }
     Route::addRdiff(r_diff);
     if(auto_mode_callback()){
       mode = Mode::Manual;
