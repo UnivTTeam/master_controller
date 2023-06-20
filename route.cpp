@@ -58,10 +58,10 @@ float BangBang::getT(float x) const
     return 0.0f;
   }else if(x < 0.5f * Xacc){
     return std::sqrt(2.0f * max(x, 0.0f) / A);
-  }else if(t < X - 0.5f * Xacc){
+  }else if(x < X - 0.5f * Xacc){
     float dx = x - 0.5f * Xacc;
     return Tacc + dx / A;
-  }else if(t < X){
+  }else if(x < X){
     float dx = X - x;
     return Ttotal - std::sqrt(2.0f * max(dx, 0.0f) / A);
   }else{
@@ -118,17 +118,6 @@ bool RotRoute::operator()() {
   return bangbang.isEnd();
 }
 
-// RotAdjustRoute
-RotAdjustRoute::RotAdjustRoute() {
-  float theta_dest = Task::theta_dest;
-  Task::theta_dest = robot_pos.static_frame.rot.getAngle();
-  route = RotRoute(theta_dest - Task::theta_dest);
-}
-
-bool RotAdjustRoute::operator()() {
-  return route();
-}
-
 // ParaRoute
 ParaRoute::ParaRoute(float x, float y, float time_mergin){
   Serial.printf("ParaRoute\n");
@@ -162,7 +151,6 @@ bool ParaRoute::operator()(){
   float y = r * ey;
   float t = max(bangbang.getT(x), minimum_route_time);
 
-  /*
   if(!near_end){
     bangbang.setT(t);
     if(bangbang.isNearEnd()){
@@ -173,8 +161,6 @@ bool ParaRoute::operator()(){
   if(near_end){
     t = Params::current_time - t0;
   }
-  */
-  t = Params::current_time - t0;  // TODO
   bangbang.setT(t);
 
   float x_dest = bangbang.getX();
@@ -185,19 +171,19 @@ bool ParaRoute::operator()(){
   Task::v_dest = (vx*ex) + (vy*ey);
 
   return isEnd();
-  return Task::interruptAutoMode();
 }
 
 // LinearRoute
 LinearRoute::LinearRoute(float x, float y){
   Serial.printf("LinearRoute\n");
-  t0 = Params::current_time;
-  r0 = robot_pos.static_frame.pos;
-  r_diff = Vec2<float>(0.0f, 0.0f);
-
   auto dr = linear::Vec2<float>(x, y);
   ex = (1.0f / dr.norm()) * dr;
   ey = linear::Vec2<float>(-ex.y, ex.x);
+
+  t0 = Params::current_time 
+        + (Task::v_dest * ex) / Params::AUTO_CONTROL_PARA_ACC;
+  r0 = robot_pos.static_frame.pos;
+  r_diff = Vec2<float>(0.0f, 0.0f);
 
   Task::setAutoMode();
 }
@@ -329,7 +315,8 @@ bool GeneralRoute::operator()(){
 // GTGTRoute
 GTGTRoute::GTGTRoute(){
   step = 0;
-  setNewRoute(0.0f, -700.0f);
+  bangbang = BangBang(1.0f, 1.0f, 1.0f);  // dummy
+  t0 = Params::current_time - 100.0f;
 
   Task::setAutoMode();
 }
@@ -342,9 +329,10 @@ void GTGTRoute::setNewRoute(float x, float y)
   bangbang = BangBang(
     r.norm(),
     Params::AUTO_CONTROL_PARA_VEL,
-    Params::AUTO_CONTROL_PARA_ACC
+    Params::AUTO_CONTROL_PARA_ACC * 1.2f
   );
   e = (1.0f / r.norm()) * r;
+  step++;
 }
 
 bool GTGTRoute::operator()(){
@@ -353,29 +341,29 @@ bool GTGTRoute::operator()(){
   
   if(bangbang.isEnd()){
     if(step == 0){
-      setNewRoute(1000.0f, 0.0f);
+      setNewRoute(400.0f, 0.0f);
     }else if(step==1){
-      setNewRoute(0.0f, 600.0f);
+      setNewRoute(0.0f, 400.0f);
     }else if(step==2){
-      setNewRoute(-500.0f, 0.0f);
+      setNewRoute(400.0f, 0.0f);
     }else if(step==3){
-      setNewRoute(500.0f, 0.0f);
+      setNewRoute(-200.0f, 0.0f);
     }else if(step==2){
-      setNewRoute(0.0f, -500.0f);
+      setNewRoute(0.0f, 400.0f);
     }else if(step==3){
-      setNewRoute(0.0f, 500.0f);
+      setNewRoute(0.0f, -300.0f);
     }else if(step==4){
-      setNewRoute(-500.0f, 0.0f);
+      setNewRoute(300.0f, 0.0f);
     }else if(step==5){
-      setNewRoute(500.0f, 0.0f);
+      setNewRoute(-300.0f, 0.0f);
     }else if(step==6){
-      setNewRoute(0.0f, -500.0f);
+      setNewRoute(0.0f, 300.0f);
     }else if(step==7){
-      setNewRoute(0.0f, 500.0f);
+      setNewRoute(0.0f, -300.0f);
     }else{
-      Task::callForceEmergency();
+      return true;
+      // Task::callForceEmergency();
     }
-    step++;
     bangbang.setT(0.0f);
   }
   Task::v_dest = bangbang.getV() * e;

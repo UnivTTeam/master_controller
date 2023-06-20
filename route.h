@@ -47,17 +47,6 @@ private:
   float dir;
 };
 
-// 回転経路，自己位置認識に基づいて回転方向を揃える
-struct RotAdjustRoute{
-  RotAdjustRoute();
-
-  bool isEnd() { return route.isEnd(); }
-  bool operator()();
-
-private:
-  RotRoute route;
-};
-
 // 並進経路
 struct ParaRoute{
   ParaRoute(){}

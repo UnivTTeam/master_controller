@@ -46,6 +46,13 @@ void retryElevator()
   end_time = current_time + Params::ELEVATOR_TIME;
 }
 
+void retryElevator(int i)
+{
+  target_pin = i;
+  end_time = current_time + Params::ELEVATOR_TIME;
+  elevator_step = i+1;
+}
+
 void stopElevator()
 {
   end_time = 0.0f;

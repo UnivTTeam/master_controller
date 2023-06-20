@@ -26,11 +26,6 @@ enum class Mode : int {
 };
 Mode mode = Mode::Manual;
 
-SwitchUpperTrigger up_wrapper = SwitchUpperTrigger();
-SwitchUpperTrigger left_wrapper = SwitchUpperTrigger();
-SwitchUpperTrigger right_wrapper = SwitchUpperTrigger();
-SwitchUpperTrigger down_wrapper = SwitchUpperTrigger();
-
 SwitchUpperTrigger circle_wrapper = SwitchUpperTrigger();
 
 SwitchUpperTrigger l1_wrapper = SwitchUpperTrigger();
@@ -91,23 +86,6 @@ int checkTaskStep(int i){
 void autoTask()
 {
   using Elevator::setElevator;
-  /*
-  if(task_step==0 && PS4.Up()){
-    auto_mode_callback = Route::GeneralRoute({{-800.0f, 1550.0f}}, 0, 0.0f);
-  }else if(task_step<=2){
-    auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
-  }else if(task_step==3){
-    auto_mode_callback = Route::GeneralRoute({{-700.0f, 0.0f}, {-M_PI}, {0.0f, 4600.0f}, {500.0f, 0.0f}}, 2);
-  }else if(task_step<=5){
-    auto_mode_callback = Route::ParaRoute(2400.0f, 0.0f);
-  }else if(task_step==6){
-    auto_mode_callback = Route::GeneralRoute({{700.0f, 0.0f}, {M_PI}, {0.0f, -2100.0f}}, 2);
-  }else if(task_step<=9){
-    auto_mode_callback = Route::ParaRoute(-2400.0f, 0.0f);
-  }else{
-    auto_mode_callback = Route::GTGTRoute();
-  }
-  */
   if(checkTaskStep(0) && PS4.Up()){
     if(task_step==-1){
       robot_pos = Transform::MultidiffTransform<float, 1>(Params::init_pos);
@@ -118,7 +96,7 @@ void autoTask()
     task_step = 0;
     auto_x_mode = false;
   }else if(checkTaskStep(1) && PS4.Left()){
-    auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
+    auto_mode_callback = Route::LinearRoute(-1.0f, 0.0f);
     task_step = 1;
     auto_x_mode = true;
   }else if(checkTaskStep(2) && PS4.Up()){
@@ -130,7 +108,7 @@ void autoTask()
     task_step = 2;
     auto_x_mode = false;
   }else if(checkTaskStep(3) && PS4.Right()){
-    auto_mode_callback = Route::LinearRoute(900000.0f, 0.0f);
+    auto_mode_callback = Route::LinearRoute(1.0f, 0.0f);
     task_step = 3;
     auto_x_mode = true;
   }else if(checkTaskStep(4) && PS4.Down()){
@@ -142,12 +120,16 @@ void autoTask()
     task_step = 4;
     auto_x_mode = false;
   }else if(checkTaskStep(5) && PS4.Left()){
-    auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
+    auto_mode_callback = Route::LinearRoute(-1.0f, 0.0f);
     task_step = 5;
     auto_x_mode = true;
   }else if(checkTaskStep(6) && PS4.Down()){
-    auto_mode_callback = Route::GTGTRoute();
+    auto_mode_callback = Route::LinearRoute(0.0f, -1.0f);
     task_step = 6;
+    auto_x_mode = false;
+  }else if(checkTaskStep(7) && PS4.Right()){
+    auto_mode_callback = Route::GTGTRoute();
+    task_step = 7;
     auto_x_mode = false;
   }
 }
@@ -158,10 +140,6 @@ bool autoModeGoButton() {
 
 void taskCallback() {
   // ボタン読み込み
-  bool up = up_wrapper(PS4.Up());
-  bool left = left_wrapper(PS4.Left());
-  bool right = right_wrapper(PS4.Right());
-  bool down = down_wrapper(PS4.Down());
   bool l1 = l1_wrapper(PS4.L1());
   bool r1 = r1_wrapper(PS4.R1());
   bool circle = circle_wrapper(PS4.Circle());
@@ -187,24 +165,14 @@ void taskCallback() {
     if (l1) {
       float dtheta = Params::l1r1_rot_angle;
       robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
-      //auto_mode_callback = Route::RotAdjustRoute();
     } else if (r1) {
       float dtheta = -Params::l1r1_rot_angle;
       robot_pos.static_frame.rot = Rot2<float>(robot_pos.static_frame.rot.getAngle() - dtheta);
-      //auto_mode_callback = Route::RotAdjustRoute();
     } else if (PS4.L2()) { // L2回転
       auto_mode_callback = Route::RotRoute(Params::AUTO_CONTROL_ROT_ANGLE);
     } else if (PS4.R2()) { // R2回転
       auto_mode_callback = Route::RotRoute(-Params::AUTO_CONTROL_ROT_ANGLE);
-    }/* else if (PS4.Triangle()) {
-      auto_mode_callback = Route::GTGTRoute();
-    } else if (PS4.Square()){
-      auto_mode_callback = Route::GeneralRoute({
-        {1000.0f, 0.0f}, {0.5f * M_PI}, 
-        {0.0f, 1000.0f}, {0.5f * M_PI}, 
-        {-1000.0f, 0.0f}, {-0.5f * M_PI}, 
-        {0.0f, -1000.0f}, {-0.5f * M_PI}});
-    }*/
+    }
   }
   if(mode == Mode::Manual){
     if(autoModeGoButton()){
@@ -235,24 +203,18 @@ void taskCallback() {
   // 熊手処理
   if(mode == Mode::Manual || mode == Mode::Auto || mode == Mode::Rot){
     using namespace Elevator;
+    if(circle){
+      if(task_step < 0){
+        resetElevator();
+      } else if(task_step < 2){
+        retryElevator(0);
+      } else if(task_step < 4){
+        retryElevator(1);
+      } else{
+        retryElevator(2);
+      }
+    }
     bool is_end = elevatorCallback();
-
-    /*
-    if(down){
-      retryElevator();
-    }
-    if(left){
-      resetElevator();
-      elevator_step--;
-    }
-    if(right){
-      resetElevator();
-      elevator_step++;
-    }
-    if(is_end & up){
-      setElevator();
-    }
-    */
   } else if(mode == Mode::Emergency){
     Elevator::stopElevator();
   }

@@ -9,6 +9,7 @@ bool elevatorCallback();
 void setElevator();
 void resetElevator();
 void retryElevator();
+void retryElevator(int i);
 void stopElevator();
 
 } // namespace Elevator
