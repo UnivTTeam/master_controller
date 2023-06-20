@@ -88,7 +88,7 @@ RotRoute::RotRoute(float theta, float time_mergin)
     time_mergin
   );
 
-  Task::setAutoMode();
+  Task::setRotMode();
 }
 
 bool RotRoute::isEnd()
@@ -162,6 +162,7 @@ bool ParaRoute::operator()(){
   float y = r * ey;
   float t = max(bangbang.getT(x), minimum_route_time);
 
+  /*
   if(!near_end){
     bangbang.setT(t);
     if(bangbang.isNearEnd()){
@@ -172,6 +173,8 @@ bool ParaRoute::operator()(){
   if(near_end){
     t = Params::current_time - t0;
   }
+  */
+  t = Params::current_time - t0;  // TODO
   bangbang.setT(t);
 
   float x_dest = bangbang.getX();
@@ -181,7 +184,39 @@ bool ParaRoute::operator()(){
   float vy = -Params::paraKp * y;
   Task::v_dest = (vx*ex) + (vy*ey);
 
+  return isEnd();
   return Task::interruptAutoMode();
+}
+
+// LinearRoute
+LinearRoute::LinearRoute(float x, float y){
+  Serial.printf("LinearRoute\n");
+  t0 = Params::current_time;
+  r0 = robot_pos.static_frame.pos;
+  r_diff = Vec2<float>(0.0f, 0.0f);
+
+  auto dr = linear::Vec2<float>(x, y);
+  ex = (1.0f / dr.norm()) * dr;
+  ey = linear::Vec2<float>(-ex.y, ex.x);
+
+  Task::setAutoMode();
+}
+
+bool LinearRoute::operator()(){
+  linear::Vec2<float> r = robot_pos.static_frame.pos - (r0+r_diff);
+  float t = Params::current_time - t0 + 0.2f;
+  float y = r * ey;
+
+  float vx = Params::AUTO_CONTROL_PARA_VEL;
+  float vmax = t * Params::AUTO_CONTROL_PARA_ACC;
+  if(vx > vmax){
+    vx = vmax;
+  }
+  float vy = -Params::paraKp * y;
+  
+  Task::v_dest = (vx*ex) + (vy*ey);
+
+  return false;
 }
 
 void addRdiff(const Vec2<float>& x)
@@ -285,9 +320,7 @@ bool GeneralRoute::operator()(){
     }
   }
 
-  if(step == max_step -1 && is_para_route){
-    return Task::interruptAutoMode();
-  } else if(step == data.size()){
+  if(step == data.size()){
     return true;
   }
   return false;

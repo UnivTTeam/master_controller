@@ -128,8 +128,9 @@ void getIMU() {  //IMUの値を取得する関数
     imu_yaw = ((MadgwickFilter.getYaw() - 180.0f) - imu_drift * stime) / 180.0f * M_PI;
     static float imu_yaw_offset = imu_yaw;
     imu_yaw -= imu_yaw_offset;
+    
   }
-  // Serial.printf("%f %f\n", micros()/1000000.f, imu_yaw);
+//   Serial.printf("%f %f\n", micros()/1000000.f, imu_yaw);
 }
 
 bool imuNotCaliblated(){

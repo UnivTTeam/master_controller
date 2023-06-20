@@ -9,6 +9,7 @@ inline float omega_dest = 0.0f;
 
 bool interruptAutoMode();
 void setAutoMode();
+void setRotMode();
 void callForceEmergency();
 
 void setupTask();

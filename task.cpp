@@ -21,7 +21,8 @@ enum class Mode : int {
   Emergency = -1,
   Manual = 0,
   Auto = 1,
-  MapParam = 2,
+  Rot = 2,
+  MapParam = 3,
 };
 Mode mode = Mode::Manual;
 
@@ -48,8 +49,8 @@ float readStickRaw(int8_t x) {
 }
 Vec2<float> readStick() {
   return Vec2<float>(
-    readStickRaw(PS4.LStickX()),
-    readStickRaw(PS4.RStickY())
+    readStickRaw(PS4.RStickX()),
+    readStickRaw(PS4.LStickY())
   );
 }
 bool interruptAutoMode() {
@@ -61,6 +62,11 @@ std::function<bool()> auto_mode_callback = [](){ return true; };
 void setAutoMode()
 {
   mode = Mode::Auto;
+}
+
+void setRotMode()
+{
+  mode = Mode::Rot;
 }
 
 bool force_emergency = false;
@@ -93,16 +99,16 @@ void autoTask()
   if(task_step==0){
     auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f}}, 0, 0.0f);
   }else if(task_step==1){
-    auto_mode_callback = Route::ParaRoute(90000.0f, 0.0f);
+    auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
   }else if(task_step==2){
     auto_mode_callback = Route::GeneralRoute({{-M_PI}, {0.0f, 4600.0f}}, 1);
   }else if(task_step==3){
-    auto_mode_callback = Route::ParaRoute(90000.0f, 0.0f);
+    auto_mode_callback = Route::LinearRoute(900000.0f, 0.0f);
   }else if(task_step==4){
     auto_mode_callback = Route::GeneralRoute({{M_PI}, {0.0f, -1800.0f}}, 1);
   }else if(task_step==5){
-    auto_mode_callback = Route::ParaRoute(-90000.0f, 0.0f);
-  }else if(task_step==5){
+    auto_mode_callback = Route::LinearRoute(-900000.0f, 0.0f);
+  }else if(task_step==6){
     auto_mode_callback = Route::GTGTRoute();
   }
   task_step++;
@@ -158,10 +164,13 @@ void taskCallback() {
         {0.0f, -1000.0f}, {-0.5f * M_PI}});
     }
   }
-  if(mode == Mode::Manual || mode == Mode::Auto){
+  if(mode == Mode::Manual){
     if(circle){
       autoTask();
     }
+  }
+  if(mode == Mode::Auto && !(PS4.Circle()|PS4.Triangle())){
+    mode = Mode::Emergency;
   }
   // 子機にモードを送信
   CommandValue::slave_emergency = (mode == Mode::Emergency || mode == Mode::MapParam);
@@ -174,7 +183,7 @@ void taskCallback() {
     digitalWrite(Params::GREEN_LED, false);
   }else if(mode == Mode::Manual){
     digitalWrite(Params::GREEN_LED, true);
-  }else if(mode == Mode::Auto){
+  }else if(mode == Mode::Auto || mode == Mode::Rot){
     int t = (current_time*10.0f);
     digitalWrite(Params::GREEN_LED, t%2);
   }else{
@@ -182,7 +191,7 @@ void taskCallback() {
   }
 
   // 熊手処理
-  if(mode == Mode::Manual || mode == Mode::Auto){
+  if(mode == Mode::Manual || mode == Mode::Auto || mode == Mode::Rot){
     using namespace Elevator;
     bool is_end = elevatorCallback();
 
@@ -219,8 +228,8 @@ void taskCallback() {
       v_dest = last_v_dest + acc * Params::control_interval_sec;
     }
     setVelocityFromField();
-  } else if (mode == Mode::Auto){
-    auto r_diff = Params::AUTO_MODE_MANUAL_POS_CHANGE * readStick();
+  } else if (mode == Mode::Auto || mode == Mode::Rot){
+    auto r_diff = Params::control_interval_sec * Params::AUTO_MODE_MANUAL_POS_CHANGE * readStick();
     Route::addRdiff(r_diff);
     if(auto_mode_callback()){
       mode = Mode::Manual;

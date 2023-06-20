@@ -76,6 +76,20 @@ private:
   Vec2<float> dr, ex, ey;
 };
 
+// 並進経路
+struct LinearRoute{
+//  ParaRoute(){}
+  LinearRoute(float x, float y);
+  
+  bool isEnd(){ return false; }
+  bool operator()();
+
+private:
+  float t0;
+  Vec2<float> r0;
+
+  Vec2<float> dr, ex, ey;
+};
 
 // 一般経路
 // 回転経路，並進経路を順番に実施

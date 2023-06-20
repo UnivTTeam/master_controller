@@ -27,7 +27,7 @@ inline constexpr float imu_calibration_start_time_sec = 3.0f;
 inline constexpr float MANUAL_MAX_PARA_VEL = 800.0f;
 
 inline constexpr float AUTO_CONTROL_PARA_VEL = 2000.0f;
-inline constexpr float AUTO_CONTROL_PARA_ACC = 2500.0f;
+inline constexpr float AUTO_CONTROL_PARA_ACC = 2000.0f;
 
 inline constexpr float AUTO_CONTROL_ROT_ANGLE = 0.5f * M_PI;
 inline constexpr float AUTO_CONTROL_ROT_VEL = 2.0f * M_PI;  // v=1500 <--> omega=3.5
@@ -49,7 +49,7 @@ inline constexpr float optical_flow_scale = 42.2f; // 90.05186170389779f;
 
 // ニクロム線のピン番号
 inline const std::vector<std::vector<int>> ELEVATOR_PINS = {{{13,25},{14},{27},{26}}};
-inline constexpr float ELEVATOR_TIME = 4.0;
+inline constexpr float ELEVATOR_TIME = 0.4f;
 inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED
@@ -57,4 +57,3 @@ inline constexpr int RED_LED = 35;
 inline constexpr int YELLOW_LED = 34;
 inline constexpr int GREEN_LED = 32;
 }
-
