@@ -340,29 +340,14 @@ bool GTGTRoute::operator()(){
   bangbang.setT(t);
   
   if(bangbang.isEnd()){
-    if(step == 0){
-      setNewRoute(400.0f, 0.0f);
-    }else if(step==1){
-      setNewRoute(0.0f, 400.0f);
-    }else if(step==2){
-      setNewRoute(400.0f, 0.0f);
-    }else if(step==3){
-      setNewRoute(-200.0f, 0.0f);
-    }else if(step==2){
-      setNewRoute(0.0f, 400.0f);
-    }else if(step==3){
-      setNewRoute(0.0f, -300.0f);
-    }else if(step==4){
-      setNewRoute(300.0f, 0.0f);
-    }else if(step==5){
-      setNewRoute(-300.0f, 0.0f);
-    }else if(step==6){
-      setNewRoute(0.0f, 300.0f);
-    }else if(step==7){
-      setNewRoute(0.0f, -300.0f);
+    if(step&4 == 0){
+      setNewRoute(200.0f, 0.0f);
+    }else if(step&4 == 1){
+      setNewRoute(0.0f, 200.0f);
+    }else if(step&4 == 2){
+      setNewRoute(-100.0f, 0.0f);
     }else{
-      return true;
-      // Task::callForceEmergency();
+      setNewRoute(0.0f, -100.0f);
     }
     bangbang.setT(0.0f);
   }
