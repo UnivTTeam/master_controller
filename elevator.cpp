@@ -18,7 +18,7 @@ void elevatorCallback()
       float t = current_time - start_time;
       for(int j=0; j<pins.size(); j++){
         int k = t / Params::ELEVATOR_TIME;
-        digitalWrite(pin, (i==target_pin)&(j==k));
+        digitalWrite(pins[j], (i==target_pin)&(j==k));
       }
     }
   }
@@ -26,7 +26,7 @@ void elevatorCallback()
 
 void resetElevator()
 {
-  start_time = -1.0f;
+  start_time = -100000000000.0f;
 }
 
 void retryElevator()
@@ -42,7 +42,7 @@ void retryElevator(int i)
 
 void stopElevator()
 {
-  end_time = 0.0f;
+  resetElevator();
   for(const auto& pins: Params::ELEVATOR_PINS){
     for(const auto& pin : pins) {
       digitalWrite(pin, LOW);
