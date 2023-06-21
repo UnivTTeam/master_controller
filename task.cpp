@@ -75,10 +75,7 @@ void callForceEmergency()
 int task_step = -1;
 bool auto_x_mode = true;
 int checkTaskStep(int i){
-  if(task_step == i-1){
-    return true;
-  }
-  if(task_step == i){
+  if(task_step == i-1 || task_step == i){
     return true;
   }
   return false;
@@ -92,7 +89,7 @@ void autoTask()
     }
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
-    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f - ydiff}}, 0, 0.0f);
+    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f - ydiff}}, 0, 0, 0.0f);
     task_step = 0;
     auto_x_mode = false;
   }else if(checkTaskStep(1) && PS4.Left()){
@@ -104,7 +101,7 @@ void autoTask()
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
     float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
-    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, 4600.0f - ydiff}}, 1, y_kumade);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, 4600.0f - ydiff}}, 1, 1, y_kumade);
     task_step = 2;
     auto_x_mode = false;
   }else if(checkTaskStep(3) && PS4.Right()){
@@ -116,7 +113,7 @@ void autoTask()
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
     float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
-    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, -2300.0f - ydiff}}, 1, y_kumade);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, -2300.0f - ydiff}}, 2, 1, y_kumade);
     task_step = 4;
     auto_x_mode = false;
   }else if(checkTaskStep(5) && PS4.Left()){
@@ -143,11 +140,11 @@ void taskCallback() {
   bool l1 = l1_wrapper(PS4.L1());
   bool r1 = r1_wrapper(PS4.R1());
   bool circle = circle_wrapper(PS4.Circle());
+  bool emergency_button = PS4.Cross();
 
   // モード読み込み
   if(mode != Mode::MapParam){
     // 緊急停止処理
-    bool emergency_button = PS4.Cross();
     if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
       mode = Mode::Emergency;
     }
@@ -182,8 +179,12 @@ void taskCallback() {
   if(mode == Mode::Auto && !autoModeGoButton()){
     mode = Mode::Emergency;
   }
+  if(emergency_button){
+    mode = Mode::Emergency;
+  }
   // 子機にモードを送信
   CommandValue::slave_emergency = (mode == Mode::Emergency || mode == Mode::MapParam);
+  CommandValue::master_step = task_step;
 
   // インジケータ―
   if(imuNotCaliblated()){
@@ -215,7 +216,7 @@ void taskCallback() {
       }
     }
     bool is_end = elevatorCallback();
-  } else if(mode == Mode::Emergency){
+  } else {
     Elevator::stopElevator();
   }
 
@@ -257,7 +258,7 @@ void taskCallback() {
       mode = Mode::Manual;
     }
     setVelocityFromField();
-  } else if(mode == Mode::Emergency){
+  } else {
     CommandValue::wheel_vx = 0.0f;
     CommandValue::wheel_vy = 0.0f;
     CommandValue::wheel_vw = 0.0f;

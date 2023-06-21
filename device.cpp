@@ -150,6 +150,7 @@ volatile bool slave_emergency = 0;
 volatile float wheel_vx = 0.0f;
 volatile float wheel_vy = 0.0f;
 volatile float wheel_vw = 0.0f;
+volatile uint8_t master_step = 0xff;
 }
 
 void sendFloatValue(float value){
@@ -170,6 +171,7 @@ void sendDataToChild() {
   }else{
     Wire.write(0);
   }
+  Wire.write(CommandValue::master_step);
 
   //位置を送信
   sendFloatValue(robot_pos.static_frame.pos.x);

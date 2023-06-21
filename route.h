@@ -88,6 +88,7 @@ private:
 struct GeneralRoute {
   GeneralRoute(
     std::vector<std::vector<float>> data_,
+    int elevator_target_=-1,
     int elevator_step_=-1,  // デフォルトは上昇機構なし
     float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF,
     float time_mergin_=0.0f);
@@ -101,6 +102,7 @@ private:
 
   int step;
   int elevator_step;
+  int elevator_target;
   float time_mergin;
   int max_step;
 

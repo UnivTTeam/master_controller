@@ -180,8 +180,8 @@ LinearRoute::LinearRoute(float x, float y){
   ex = (1.0f / dr.norm()) * dr;
   ey = linear::Vec2<float>(-ex.y, ex.x);
 
-  t0 = Params::current_time 
-        + (Task::v_dest * ex) / Params::AUTO_CONTROL_PARA_ACC;
+  t0 = Params::current_time;
+  // (Task::v_dest * ex) / Params::AUTO_CONTROL_PARA_ACC;
   r0 = robot_pos.static_frame.pos;
   r_diff = Vec2<float>(0.0f, 0.0f);
 
@@ -213,11 +213,13 @@ void addRdiff(const Vec2<float>& x)
 // GeneralRoute
 GeneralRoute::GeneralRoute(
     std::vector<std::vector<float>> data_,
+    int elevator_target_,
     int elevator_step_,
     float elevator_move_length_,
     float time_mergin_)
 {
   Serial.printf("GeneralRoute\n");
+  elevator_target = elevator_target_;
   data = data_;
   elevator_move_length = elevator_move_length_;
   time_mergin = time_mergin_;
@@ -301,7 +303,7 @@ bool GeneralRoute::operator()(){
       ok = (para.getX() >= elevator_move_length);
     }
     if(ok){
-      Elevator::setElevator();
+      Elevator::retryElevator(elevator_target);
       elevator_step = data.size() + 100;
     }
   }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 // センサ値
 namespace SensorValue {
 extern volatile float gyro_theta;
@@ -13,6 +15,7 @@ extern volatile bool slave_emergency;
 extern volatile float wheel_vx;
 extern volatile float wheel_vy;
 extern volatile float wheel_vw;
+extern volatile uint8_t master_step;
 }
 
 // デバイスの初期化
