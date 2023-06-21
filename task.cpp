@@ -82,7 +82,6 @@ int checkTaskStep(int i){
 }
 void autoTask()
 {
-  using Elevator::setElevator;
   if(checkTaskStep(0) && PS4.Up()){
     if(task_step==-1){
       robot_pos = Transform::MultidiffTransform<float, 1>(Params::init_pos);
@@ -215,7 +214,7 @@ void taskCallback() {
         retryElevator(2);
       }
     }
-    bool is_end = elevatorCallback();
+    elevatorCallback();
   } else {
     Elevator::stopElevator();
   }
