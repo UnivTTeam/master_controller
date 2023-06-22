@@ -12,12 +12,23 @@ volatile int elevator_step = 0;
 
 void elevatorCallback()
 {
-  for(int i=0; i<Params::ELEVATOR_PINS.size(); i++){
-    const auto pins = Params::ELEVATOR_PINS[i];
-    float t = current_time - start_time;
-    for(int j=0; j<pins.size(); j++){
+  Serial.printf("%d\n", Params::ELEVATOR_PINS_LISTS.size());
+  for(int i=0; i<Params::ELEVATOR_PINS_LISTS.size(); i++){
+    const auto& pins_list = Params::ELEVATOR_PINS_LISTS[i];
+    if(i==target_pin){
+      float t = current_time - start_time;
       int k = t / Params::ELEVATOR_TIME;
-      digitalWrite(pins[j], (i==target_pin)&(j==k));
+      for(int j=0; j<pins_list.size(); j++){
+        for(const auto& pin : pins_list[j]){
+          digitalWrite(pin, j==k);
+        }
+      }
+    }else{
+      for(const auto& pins : pins_list) {
+        for(const auto& pin : pins) {
+          digitalWrite(pin, LOW);
+        }
+      }
     }
   }
 }
@@ -41,9 +52,11 @@ void retryElevator(int i)
 void stopElevator()
 {
   resetElevator();
-  for(const auto& pins: Params::ELEVATOR_PINS){
-    for(const auto& pin : pins) {
-      digitalWrite(pin, LOW);
+  for(const auto& pins_list : Params::ELEVATOR_PINS_LISTS) {
+    for(const auto& pins : pins_list) {
+      for(const auto& pin : pins) {
+        digitalWrite(pin, LOW);
+      }
     }
   }
 }

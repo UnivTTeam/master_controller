@@ -41,10 +41,12 @@ void setupIMU() {
 
 void setupDevice() {
   // ニクロム線の初期化
-  for(const auto& pins : Params::ELEVATOR_PINS) {
-    for(const auto& pin : pins) {
-      pinMode(pin, OUTPUT);
-      digitalWrite(pin, LOW);
+  for(const auto& pins_list : Params::ELEVATOR_PINS_LISTS) {
+    for(const auto& pins : pins_list) {
+      for(const auto& pin : pins) {
+        pinMode(pin, OUTPUT);
+        digitalWrite(pin, LOW);
+      }
     }
   }
 
