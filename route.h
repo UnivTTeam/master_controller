@@ -10,6 +10,8 @@ namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
+constexpr float TIME_MERGIN = 0.3f;
+
 // 経路の実態
 // 直接呼ぶことはない
 struct BangBang {
@@ -18,7 +20,7 @@ struct BangBang {
 
   void setT(float t_);
   float getT(float x) const;
-  bool isEnd() { return t >= Ttotal + time_mergin; }
+  bool isEnd() { return t >= Ttotal; }
   bool isNearEnd() { return t >= Ttotal - Tacc; }
 
   float getX() { return x; }
@@ -34,7 +36,7 @@ private:
 // 回転経路，与えられた角度だけ回転する
 struct RotRoute{
   RotRoute(){}
-  RotRoute(float theta, float time_mergin = 0.0f);
+  RotRoute(float theta, float time_mergin = TIME_MERGIN);
 
   bool isEnd();
   bool operator()();
@@ -50,7 +52,7 @@ private:
 // 並進経路
 struct ParaRoute{
   ParaRoute(){}
-  ParaRoute(float x, float y, float time_mergin = 0.0f);
+  ParaRoute(float x, float y, float time_mergin = TIME_MERGIN);
 
   bool isEnd();
   float getX() { return bangbang.getX(); }
@@ -91,7 +93,7 @@ struct GeneralRoute {
     int elevator_target_=-1,
     int elevator_step_=-1,  // デフォルトは上昇機構なし
     float elevator_move_length_=Params::ELEVATOR_UP_Y_DIFF,
-    float time_mergin_=0.0f);
+    float time_mergin_=TIME_MERGIN);
 
   bool setNewRoute();
   bool operator()();
