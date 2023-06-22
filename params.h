@@ -21,8 +21,8 @@ inline const Transform::StaticTransform<float> optical_flow_pos(-60.0f, 250.0f, 
 // 制御パラメタ
 inline constexpr float l1r1_rot_angle = (3.0f/180.0f) * M_PI;
 
-inline constexpr float imu_calibration_time_sec = 5.0f;
-inline constexpr float imu_calibration_start_time_sec = 3.0f;
+inline constexpr float imu_calibration_time_sec = 8.0f;
+inline constexpr float imu_calibration_start_time_sec = 4.0f;
 
 inline constexpr float MANUAL_MAX_PARA_VEL = 1600.0f;
 
