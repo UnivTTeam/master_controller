@@ -8,7 +8,7 @@ namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
-constexpr float minimum_route_time = 0.5f;
+constexpr float minimum_route_time = 0.2f;
 
 Vec2<float> r_diff(0.0f, 0.0f);
 
@@ -183,7 +183,6 @@ LinearRoute::LinearRoute(float x, float y){
   ey = linear::Vec2<float>(-ex.y, ex.x);
 
   t0 = Params::current_time;
-  // (Task::v_dest * ex) / Params::AUTO_CONTROL_PARA_ACC;
   r0 = robot_pos.static_frame.pos;
   r_diff = Vec2<float>(0.0f, 0.0f);
 

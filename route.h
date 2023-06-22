@@ -10,7 +10,7 @@ namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
-constexpr float TIME_MERGIN = 0.3f;
+constexpr float TIME_MERGIN = 0.15f;
 
 // 経路の実態
 // 直接呼ぶことはない
