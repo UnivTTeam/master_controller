@@ -18,7 +18,7 @@ struct BangBang {
 
   void setT(float t_);
   float getT(float x) const;
-  bool isEnd() { return t >= Ttotal + time_mergin; }
+  bool isEnd() { return t >= Ttotal; }
   bool isNearEnd() { return t >= Ttotal - Tacc; }
 
   float getX() { return x; }
