@@ -50,7 +50,7 @@ void BangBang::setT(float t_)
     x = x;
     v = 0.0f;
   }
-  float vlim = A * std::min(Ttotal - t - time_mergin, 0.0f);
+  float vlim = A * std::max(Ttotal - t - time_mergin, 0.0f);
   v = std::min(v, vlim);
 };
 
