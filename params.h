@@ -53,7 +53,7 @@ inline constexpr float ELEVATOR_TIME = 0.2f;
 inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED
-inline constexpr int RED_LED = 35;
-inline constexpr int YELLOW_LED = 34;
+inline constexpr int RED_LED = 34;
+inline constexpr int YELLOW_LED = 35;
 inline constexpr int GREEN_LED = 32;
 }

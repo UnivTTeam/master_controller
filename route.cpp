@@ -319,6 +319,7 @@ GTGTRoute::GTGTRoute(){
   step = 0;
   bangbang = BangBang(1.0f, 1.0f, 1.0f);  // dummy
   t0 = Params::current_time - 100.0f;
+  e = Vec2<float>(0.0f, 0.0f);
 
   Task::setAutoMode();
 }
@@ -331,7 +332,7 @@ void GTGTRoute::setNewRoute(float x, float y)
   bangbang = BangBang(
     r.norm(),
     Params::AUTO_CONTROL_PARA_VEL,
-    Params::AUTO_CONTROL_PARA_ACC * 1.2f
+    Params::AUTO_CONTROL_PARA_ACC
   );
   e = (1.0f / r.norm()) * r;
   step++;
@@ -342,12 +343,12 @@ bool GTGTRoute::operator()(){
   bangbang.setT(t);
   
   if(bangbang.isEnd()){
-    if(step&4 == 0){
+    if(step%4 == 0){
       setNewRoute(200.0f, 0.0f);
-    }else if(step&4 == 1){
-      setNewRoute(0.0f, 200.0f);
-    }else if(step&4 == 2){
-      setNewRoute(-100.0f, 0.0f);
+    }else if(step%4 == 1){
+      setNewRoute(0.0f, -200.0f);
+    }else if(step%4 == 2){
+      setNewRoute(-200.0f, 0.0f);
     }else{
       setNewRoute(0.0f, -100.0f);
     }
