@@ -12,7 +12,6 @@ volatile int elevator_step = 0;
 
 void elevatorCallback()
 {
-  Serial.printf("%d\n", Params::ELEVATOR_PINS_LISTS.size());
   for(int i=0; i<Params::ELEVATOR_PINS_LISTS.size(); i++){
     const auto& pins_list = Params::ELEVATOR_PINS_LISTS[i];
     if(i==target_pin){
@@ -38,15 +37,17 @@ void resetElevator()
   start_time = -100000000000.0f;
 }
 
-void retryElevator()
-{
-  start_time = current_time;
-}
-
 void retryElevator(int i)
 {
+  if(target_pin != i){
+    resetElevator(); 
+  }
   target_pin = i;
-  start_time = current_time;
+
+  float end_time = start_time + Params::ELEVATOR_TIME * Params::ELEVATOR_PINS_LISTS[i].size();
+  if(end_time < current_time){
+    start_time = current_time;
+  }
 }
 
 void stopElevator()

@@ -80,12 +80,18 @@ int checkTaskStep(int i){
   }
   return false;
 }
+// constexpr float Y_STEP_0 = 1550.0f;
+// constexpr float Y_STEP_2 = 4600.0f;
+// constexpr float Y_STEP_4 = -2300.0f;
+constexpr float Y_STEP_0 = 1550.0f;
+constexpr float Y_STEP_2 = 4600.0f;
+constexpr float Y_STEP_4 = -2300.0f;
 void autoTask()
 {
   if(checkTaskStep(0) && PS4.Up()){
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
-    auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f - ydiff}}, 0, 0, 0.0f);
+    auto_mode_callback = Route::GeneralRoute({{0.0f, Y_STEP_0 - ydiff}}, 0, 0, 0.0f);
     task_step = 0;
     auto_x_mode = false;
   }else if(checkTaskStep(1) && PS4.Left()){
@@ -97,7 +103,7 @@ void autoTask()
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
     float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
-    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, 4600.0f - ydiff}}, 1, 1, y_kumade);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, Y_STEP_2 - ydiff}}, 1, 1, y_kumade);
     task_step = 2;
     auto_x_mode = false;
   }else if(checkTaskStep(3) && PS4.Right()){
@@ -109,7 +115,7 @@ void autoTask()
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
     float y_kumade = Params::ELEVATOR_UP_Y_DIFF - std::abs(ydiff);
-    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, -2300.0f - ydiff}}, 2, 1, y_kumade);
+    auto_mode_callback = Route::GeneralRoute({{theta-robot_pos.static_frame.rot.getAngle()}, {0.0f, Y_STEP_4 - ydiff}}, 2, 1, y_kumade);
     task_step = 4;
     auto_x_mode = false;
   }else if(checkTaskStep(5) && PS4.Left()){
@@ -120,9 +126,13 @@ void autoTask()
     auto_mode_callback = Route::LinearRoute(0.0f, -1.0f);
     task_step = 6;
     auto_x_mode = false;
-  }else if((checkTaskStep(7) && PS4.Right()) || PS4.Triangle()){
+  }else if((checkTaskStep(7) && PS4.Right())){
     auto_mode_callback = Route::GTGTRoute();
     task_step = 7;
+    auto_x_mode = false;
+  }
+  if(PS4.Triangle()){
+    auto_mode_callback = Route::GTGTRoute();
     auto_x_mode = false;
   }
 }
@@ -279,13 +289,13 @@ void taskCallback() {
 
   // ログ
   if(mode != Mode::MapParam){
-    // Serial.printf("t: %f dest: %f %f %f ",
-    //   current_time, 
-    //   v_dest.x, v_dest.y, theta_dest);
-    // Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
-    //   robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
-    //   robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
-    // );
+    Serial.printf("t: %f dest: %f %f %f ",
+      current_time, 
+      v_dest.x, v_dest.y, theta_dest);
+    Serial.printf("pos: %f %f %f vel: %f %f %f\n", 
+      robot_pos.static_frame.pos.x, robot_pos.static_frame.pos.y, robot_pos.static_frame.rot.getAngle(),
+      robot_pos.dynamic_frame[0].pos.x, robot_pos.dynamic_frame[0].pos.y, robot_pos.dynamic_frame[0].rot  
+    );
   } else { // MapParam
     Serial.printf("t: %f %f ofu: %f %f theta: %f\n", 
       current_time, Params::control_interval_sec, 
