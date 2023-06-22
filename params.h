@@ -49,7 +49,7 @@ inline constexpr float optical_flow_scale = 42.2f; // 90.05186170389779f;
 
 // ニクロム線のピン番号
 inline const std::vector<std::vector<int>> ELEVATOR_PINS = {{{13,25},{14},{27,26}}};
-inline constexpr float ELEVATOR_TIME = 0.2f;
+inline constexpr float ELEVATOR_TIME = 1.2f;
 inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED

@@ -8,7 +8,7 @@ namespace Route {
 
 using linear::Vec2, linear::Rot2;
 
-constexpr float minimum_route_time = 0.2f;
+constexpr float minimum_route_time = 0.5f;
 
 Vec2<float> r_diff(0.0f, 0.0f);
 
@@ -51,7 +51,7 @@ void BangBang::setT(float t_)
     v = 0.0f;
   }
   float vlim = A * std::max(Ttotal - t - time_mergin, 0.0f);
-  v = std::min(v, vlim);
+  // v = std::min(v, vlim);
 };
 
 float BangBang::getT(float x) const
@@ -59,13 +59,13 @@ float BangBang::getT(float x) const
   if(x < 0.0f){
     return 0.0f;
   }else if(x < 0.5f * Xacc){
-    return std::sqrt(2.0f * max(x, 0.0f) / A);
+    return std::sqrt(2.0f * std::max(x, 0.0f) / A);
   }else if(x < X - 0.5f * Xacc){
     float dx = x - 0.5f * Xacc;
     return Tacc + dx / A;
   }else if(x < X){
     float dx = X - x;
-    return Ttotal - std::sqrt(2.0f * max(dx, 0.0f) / A);
+    return Ttotal - std::sqrt(2.0f * std::max(dx, 0.0f) / A);
   }else{
     return Ttotal;
   }
@@ -216,14 +216,12 @@ GeneralRoute::GeneralRoute(
     std::vector<std::vector<float>> data_,
     int elevator_target_,
     int elevator_step_,
-    float elevator_move_length_,
-    float time_mergin_)
+    float elevator_move_length_)
 {
   Serial.printf("GeneralRoute\n");
   elevator_target = elevator_target_;
   data = data_;
   elevator_move_length = elevator_move_length_;
-  time_mergin = time_mergin_;
   max_step = data_.size();
 
   step = -1;
@@ -255,11 +253,11 @@ bool GeneralRoute::setNewRoute()
     Serial.printf("info.size()=%d\n", info.size());
     if(info.size() == 2){
       is_para_route = true;
-      para = ParaRoute(info[0], info[1], time_mergin);
+      para = ParaRoute(info[0], info[1]);
       return true;
     } else if(info.size() == 1){
       is_para_route = false;
-      rot = RotRoute(info[0], time_mergin);
+      rot = RotRoute(info[0]);
       return true;
     } else {
       Serial.printf("invalid route\n");
@@ -333,7 +331,7 @@ void GTGTRoute::setNewRoute(float x, float y)
   bangbang = BangBang(
     r.norm(),
     Params::AUTO_CONTROL_PARA_VEL,
-    Params::AUTO_CONTROL_PARA_ACC
+    Params::AUTO_CONTROL_PARA_ACC * 1.5
   );
   e = (1.0f / r.norm()) * r;
   step++;
@@ -345,11 +343,11 @@ bool GTGTRoute::operator()(){
   
   if(bangbang.isEnd()){
     if(step%4 == 0){
-      setNewRoute(200.0f, 0.0f);
+      setNewRoute(100.0f, 0.0f);
     }else if(step%4 == 1){
-      setNewRoute(0.0f, -200.0f);
+      setNewRoute(-100.0f, 0.0f);
     }else if(step%4 == 2){
-      setNewRoute(-200.0f, 0.0f);
+      setNewRoute(0.0f, 100.0f);
     }else{
       setNewRoute(0.0f, -100.0f);
     }

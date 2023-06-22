@@ -83,9 +83,6 @@ int checkTaskStep(int i){
 void autoTask()
 {
   if(checkTaskStep(0) && PS4.Up()){
-    if(task_step==-1){
-      robot_pos = Transform::MultidiffTransform<float, 1>(Params::init_pos);
-    }
     static float y0 = robot_pos.static_frame.pos.y;
     float ydiff = robot_pos.static_frame.pos.y - y0;
     auto_mode_callback = Route::GeneralRoute({{0.0f, 1550.0f - ydiff}}, 0, 0, 0.0f);
@@ -123,7 +120,7 @@ void autoTask()
     auto_mode_callback = Route::LinearRoute(0.0f, -1.0f);
     task_step = 6;
     auto_x_mode = false;
-  }else if(checkTaskStep(7) && PS4.Right()){
+  }else if((checkTaskStep(7) && PS4.Right()) || PS4.Triangle()){
     auto_mode_callback = Route::GTGTRoute();
     task_step = 7;
     auto_x_mode = false;
@@ -131,17 +128,27 @@ void autoTask()
 }
 
 bool autoModeGoButton() {
-  return PS4.Up() | PS4.Left() | PS4.Down() | PS4.Right() | PS4.Square();
+  return PS4.Up() | PS4.Left() | PS4.Down() | PS4.Right() | PS4.Triangle();
 }
 
+bool on_start_pos = true;
 void taskCallback() {
   // ボタン読み込み
   bool l1 = l1_wrapper(PS4.L1());
   bool r1 = r1_wrapper(PS4.R1());
   bool circle = circle_wrapper(PS4.Circle());
   bool emergency_button = PS4.Cross();
+  
+  // 初期位置設定
+  if(on_start_pos){
+    robot_pos = Transform::MultidiffTransform<float, 1>(Params::init_pos);
+  }
 
   // モード読み込み
+  if(PS4.Touchpad() && PS4.Square()){
+    on_start_pos = true;
+    task_step = -1;
+  }
   if(mode != Mode::MapParam){
     // 緊急停止処理
     if(emergency_button || (!PS4.isConnected()) || imuNotCaliblated()){
@@ -192,7 +199,12 @@ void taskCallback() {
   }else if(mode == Mode::Emergency){
     digitalWrite(Params::GREEN_LED, false);
   }else if(mode == Mode::Manual){
-    digitalWrite(Params::GREEN_LED, true);
+    if(on_start_pos){
+      int t = (current_time*4.0f);
+      digitalWrite(Params::GREEN_LED, (t%4)!=3);
+    }else{
+      digitalWrite(Params::GREEN_LED, true);
+    }
   }else if(mode == Mode::Auto || mode == Mode::Rot){
     int t = (current_time*10.0f);
     digitalWrite(Params::GREEN_LED, t%2);
@@ -261,6 +273,10 @@ void taskCallback() {
     CommandValue::wheel_vx = 0.0f;
     CommandValue::wheel_vy = 0.0f;
     CommandValue::wheel_vw = 0.0f;
+  }
+
+  if(CommandValue::wheel_vx != 0.0f || CommandValue::wheel_vy != 0.0f || CommandValue::wheel_vw){
+    on_start_pos = false;
   }
 
   // ログ
