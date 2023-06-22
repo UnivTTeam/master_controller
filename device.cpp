@@ -41,13 +41,9 @@ void setupIMU() {
 
 void setupDevice() {
   // ニクロム線の初期化
-  for(const auto& pins_list : Params::ELEVATOR_PINS_LISTS) {
-    for(const auto& pins : pins_list) {
-      for(const auto& pin : pins) {
-        pinMode(pin, OUTPUT);
-        digitalWrite(pin, LOW);
-      }
-    }
+  for(int pin : Params::ELEVATOR_PIN_LIST) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
   }
 
   // LEDの初期化
@@ -148,7 +144,7 @@ void readDevice() {
 
 // 指令値
 namespace CommandValue {
-volatile bool slave_emergency = 0;
+volatile bool slave_emergency = false;
 volatile float wheel_vx = 0.0f;
 volatile float wheel_vy = 0.0f;
 volatile float wheel_vw = 0.0f;

@@ -48,12 +48,17 @@ inline constexpr float gyro_scale = 4.05f; // [4.048290243592277, 4.050555545499
 inline constexpr float optical_flow_scale = 42.2f; // 90.05186170389779f;
 
 // ニクロム線のピン番号
-inline const std::vector<std::vector<std::vector<int>>> ELEVATOR_PINS_LISTS = {
-  {{13,25}},
-  {{14}},
-  {{27},{26}}
-};
+inline constexpr int FUTA_PIN = 25;
+inline constexpr int ELEVATOR_PIN0 = 13;
+inline constexpr int ELEVATOR_PIN1 = 14;
+inline constexpr int ELEVATOR_PIN2A = 27;
+inline constexpr int ELEVATOR_PIN2B = 26;
+inline const std::vector<int> ELEVATOR_PIN_LIST = {
+    FUTA_PIN, ELEVATOR_PIN0, ELEVATOR_PIN1, ELEVATOR_PIN2A, ELEVATOR_PIN2B};
+
 inline constexpr float ELEVATOR_TIME = 1.2f;
+inline constexpr float FUTA_TIME = 2.0f;
+
 inline constexpr float ELEVATOR_UP_Y_DIFF = 700.0f; // _mm
 
 // LED

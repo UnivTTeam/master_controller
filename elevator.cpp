@@ -12,22 +12,52 @@ volatile int elevator_step = 0;
 
 void elevatorCallback()
 {
-  for(int i=0; i<Params::ELEVATOR_PINS_LISTS.size(); i++){
-    const auto& pins_list = Params::ELEVATOR_PINS_LISTS[i];
-    if(i==target_pin){
-      float t = current_time - start_time;
-      int k = t / Params::ELEVATOR_TIME;
-      for(int j=0; j<pins_list.size(); j++){
-        for(const auto& pin : pins_list[j]){
-          digitalWrite(pin, j==k);
-        }
-      }
+  float t = current_time - start_time;
+
+  if(target_pin == 0){
+    if(t < Params::ELEVATOR_TIME){
+      digitalWrite(Params::ELEVATOR_PIN0, HIGH);
     }else{
-      for(const auto& pins : pins_list) {
-        for(const auto& pin : pins) {
-          digitalWrite(pin, LOW);
-        }
-      }
+      digitalWrite(Params::ELEVATOR_PIN0, LOW);
+    }
+    if(t < Params::FUTA_TIME){
+      digitalWrite(Params::FUTA_PIN, HIGH);
+    }else{
+      digitalWrite(Params::FUTA_PIN, LOW);
+    }
+    digitalWrite(Params::ELEVATOR_PIN1, LOW);
+    digitalWrite(Params::ELEVATOR_PIN2A, LOW);
+    digitalWrite(Params::ELEVATOR_PIN2B, LOW);
+  } else if(target_pin == 1){
+    if(t < Params::ELEVATOR_TIME){
+      digitalWrite(Params::ELEVATOR_PIN1, HIGH);
+      digitalWrite(Params::FUTA_PIN, HIGH);
+    }else{
+      digitalWrite(Params::ELEVATOR_PIN1, LOW);
+      digitalWrite(Params::FUTA_PIN, LOW);
+    }
+    digitalWrite(Params::ELEVATOR_PIN0, LOW);
+    digitalWrite(Params::ELEVATOR_PIN2A, LOW);
+    digitalWrite(Params::ELEVATOR_PIN2B, LOW);
+  }else if(target_pin == 2){
+    if(t < Params::ELEVATOR_TIME){
+      digitalWrite(Params::ELEVATOR_PIN2A, HIGH);
+      digitalWrite(Params::ELEVATOR_PIN2B, LOW);
+      digitalWrite(Params::FUTA_PIN, HIGH);
+    }else if(t < 2.0f*Params::ELEVATOR_TIME){
+      digitalWrite(Params::ELEVATOR_PIN2A, LOW);
+      digitalWrite(Params::ELEVATOR_PIN2B, HIGH);
+      digitalWrite(Params::FUTA_PIN, LOW);
+    }else{
+      digitalWrite(Params::ELEVATOR_PIN2A, LOW);
+      digitalWrite(Params::ELEVATOR_PIN2B, LOW);
+      digitalWrite(Params::FUTA_PIN, LOW);
+    }
+    digitalWrite(Params::ELEVATOR_PIN0, LOW);
+    digitalWrite(Params::ELEVATOR_PIN1, LOW);
+  }else{
+    for(int pin : Params::ELEVATOR_PIN_LIST) {
+      digitalWrite(pin, LOW);
     }
   }
 }
@@ -44,7 +74,14 @@ void retryElevator(int i)
   }
   target_pin = i;
 
-  float end_time = start_time + Params::ELEVATOR_TIME * Params::ELEVATOR_PINS_LISTS[i].size();
+  float end_time = start_time;
+  if(target_pin == 0){
+    end_time += Params::ELEVATOR_TIME;
+  } else if(target_pin == 1){
+    end_time += Params::ELEVATOR_TIME;
+  }else if(target_pin == 2){
+    end_time += 2 * Params::ELEVATOR_TIME;
+  }
   if(end_time < current_time){
     start_time = current_time;
   }
@@ -53,12 +90,8 @@ void retryElevator(int i)
 void stopElevator()
 {
   resetElevator();
-  for(const auto& pins_list : Params::ELEVATOR_PINS_LISTS) {
-    for(const auto& pins : pins_list) {
-      for(const auto& pin : pins) {
-        digitalWrite(pin, LOW);
-      }
-    }
+  for(int pin : Params::ELEVATOR_PIN_LIST) {
+    digitalWrite(pin, LOW);
   }
 }
 } // namespace Elevator

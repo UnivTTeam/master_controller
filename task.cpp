@@ -83,8 +83,8 @@ int checkTaskStep(int i){
 // constexpr float Y_STEP_0 = 1550.0f;
 // constexpr float Y_STEP_2 = 4600.0f;
 // constexpr float Y_STEP_4 = -2300.0f;
-constexpr float Y_STEP_0 = 1550.0f;
-constexpr float Y_STEP_2 = 4600.0f;
+constexpr float Y_STEP_0 = 2013.65f;
+constexpr float Y_STEP_2 = 4063.34f;
 constexpr float Y_STEP_4 = -2300.0f;
 void autoTask()
 {
