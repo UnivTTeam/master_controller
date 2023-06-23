@@ -191,7 +191,7 @@ LinearRoute::LinearRoute(float x, float y){
 
 bool LinearRoute::operator()(){
   linear::Vec2<float> r = robot_pos.static_frame.pos - (r0+r_diff);
-  float t = Params::current_time - t0 + 0.2f;
+  float t = Params::current_time - t0 + minimum_route_time;
   float y = r * ey;
 
   float vx = Params::AUTO_CONTROL_PARA_VEL;
